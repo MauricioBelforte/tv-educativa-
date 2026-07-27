@@ -1,0 +1,57 @@
+{
+  "epg": [
+    {
+      "channelId": "nasa-tv",
+      "entries": [
+        { "start": "2026-07-27T06:00:00Z", "stop": "2026-07-27T07:00:00Z", "title": "Vistas de la Tierra desde la ISS", "description": "Transmisión en vivo desde la Estación Espacial Internacional", "category": "Ciencia" },
+        { "start": "2026-07-27T07:00:00Z", "stop": "2026-07-27T08:30:00Z", "title": "Documental: El Sistema Solar", "description": "Exploración de los planetas y sus lunas", "category": "Ciencia" },
+        { "start": "2026-07-27T08:30:00Z", "stop": "2026-07-27T10:00:00Z", "title": "Lanzamiento Espacial en Vivo", "description": "Cobertura en vivo del próximo lanzamiento", "category": "Ciencia" },
+        { "start": "2026-07-27T10:00:00Z", "stop": "2026-07-27T12:00:00Z", "title": "Marte: El Próximo Frontera", "description": "Documental sobre las misiones a Marte", "category": "Ciencia" }
+      ]
+    },
+    {
+      "channelId": "arte-tv",
+      "entries": [
+        { "start": "2026-07-27T06:00:00Z", "stop": "2026-07-27T07:30:00Z", "title": "Arte y Cultura Contemporánea", "description": "Programa dedicado al arte moderno europeo", "category": "Cultural" },
+        { "start": "2026-07-27T07:30:00Z", "stop": "2026-07-27T09:00:00Z", "title": "Documental: Los Grandes Museos", "description": "Recorrido por los museos más importantes del mundo", "category": "Cultural" },
+        { "start": "2026-07-27T09:00:00Z", "stop": "2026-07-27T10:30:00Z", "title": "Concierto Filarmónico", "description": "Concierto de la Orquesta Filarmónica de Berlín", "category": "Cultural" },
+        { "start": "2026-07-27T10:30:00Z", "stop": "2026-07-27T12:00:00Z", "title": "Cine Arte: El Séptimo Sello", "description": "Clásico del cine de autor", "category": "Cultural" }
+      ]
+    },
+    {
+      "channelId": "euro-news",
+      "entries": [
+        { "start": "2026-07-27T06:00:00Z", "stop": "2026-07-27T07:00:00Z", "title": "Euronews Morning", "description": "Noticias internacionales de la mañana", "category": "Noticias" },
+        { "start": "2026-07-27T07:00:00Z", "stop": "2026-07-27T08:00:00Z", "title": "World News", "description": "Resumen de noticias globales", "category": "Noticias" },
+        { "start": "2026-07-27T08:00:00Z", "stop": "2026-07-27T09:00:00Z", "title": "Business Weekly", "description": "Análisis de mercados y economía", "category": "Noticias" },
+        { "start": "2026-07-27T09:00:00Z", "stop": "2026-07-27T10:00:00Z", "title": "Sports Update", "description": "Resumen deportivo internacional", "category": "Noticias" },
+        { "start": "2026-07-27T10:00:00Z", "stop": "2026-07-27T12:00:00Z", "title": "Euronews Midday", "description": "Noticias del mediodía", "category": "Noticias" }
+      ]
+    },
+    {
+      "channelId": "tele-quebec",
+      "entries": [
+        { "start": "2026-07-27T06:00:00Z", "stop": "2026-07-27T07:30:00Z", "title": "Matinal Educativo", "description": "Programa educativo matutino para niños", "category": "Educativo" },
+        { "start": "2026-07-27T07:30:00Z", "stop": "2026-07-27T09:00:00Z", "title": "Historia de Québec", "description": "Serie documental histórica", "category": "Educativo" },
+        { "start": "2026-07-27T09:00:00Z", "stop": "2026-07-27T10:30:00Z", "title": "Ciencias Naturales", "description": "Programa de divulgación científica", "category": "Educativo" },
+        { "start": "2026-07-27T10:30:00Z", "stop": "2026-07-27T12:00:00Z", "title": "Idiomas: Francés Básico", "description": "Curso interactivo de francés", "category": "Educativo" }
+      ]
+    },
+    {
+      "channelId": "sintel",
+      "entries": [
+        { "start": "2026-07-27T06:00:00Z", "stop": "2026-07-27T07:00:00Z", "title": "Sintel", "description": "Cortometraje animado de Blender Foundation", "category": "Películas" },
+        { "start": "2026-07-27T07:00:00Z", "stop": "2026-07-27T09:00:00Z", "title": "Detrás de Cámaras: Sintel", "description": "Documental sobre la producción del corto", "category": "Películas" },
+        { "start": "2026-07-27T09:00:00Z", "stop": "2026-07-27T09:30:00Z", "title": "Blender Showcase", "description": "Demostración de animación 3D con Blender", "category": "Películas" }
+      ]
+    },
+    {
+      "channelId": "big-buck-bunny",
+      "entries": [
+        { "start": "2026-07-27T06:00:00Z", "stop": "2026-07-27T06:30:00Z", "title": "Big Buck Bunny", "description": "Cortometraje animado de Blender Foundation", "category": "Películas" },
+        { "start": "2026-07-27T06:30:00Z", "stop": "2026-07-27T08:00:00Z", "title": "Tutoriales de Animación", "description": "Cómo se hizo Big Buck Bunny", "category": "Películas" },
+        { "start": "2026-07-27T08:00:00Z", "stop": "2026-07-27T10:00:00Z", "title": "Open Movie Marathon", "description": "Maratón de cortometrajes open source", "category": "Películas" }
+      ]
+    }
+  ]
+}

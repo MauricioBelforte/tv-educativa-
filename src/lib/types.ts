@@ -19,7 +19,28 @@ export interface ChannelsResponse {
 export interface ImportedList {
   id: string
   name: string
+  description?: string
   channels: Channel[]
   createdAt: string
   sourceUrl?: string
+  lastRefreshed?: string
+}
+
+export interface EPGEntry {
+  start: string
+  stop: string
+  title: string
+  description?: string
+  category?: string
+}
+
+export interface ChannelEPG {
+  channelId: string
+  entries: EPGEntry[]
+}
+
+export interface RefreshResult {
+  success: boolean
+  channels: Channel[]
+  error?: string
 }

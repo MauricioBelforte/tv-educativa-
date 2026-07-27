@@ -10,6 +10,8 @@ interface PlayerStore {
   isDarkMode: boolean
   importedLists: ImportedList[]
   activeListId: string | null
+  activeSources: string[]    // IDs de fuentes activas para vista múltiple
+  isRefreshing: Record<string, boolean>
   
   setChannel: (channel: Channel) => void
   togglePlay: () => void
@@ -21,6 +23,7 @@ interface PlayerStore {
   // Gestión de listas importadas
   addImportedList: (channels: Channel[], sourceUrl?: string) => string
   renameList: (listId: string, newName: string) => void
+  setListDescription: (listId: string, description: string) => void
   removeList: (listId: string) => void
   removeChannelFromList: (listId: string, channelId: string) => void
   setActiveList: (listId: string | null) => void
@@ -32,6 +35,14 @@ interface PlayerStore {
   
   // Obtener canales favoritos de todas las listas
   getFavoriteChannels: () => Channel[]
+  
+  // Fase 3: Múltiples fuentes
+  toggleSource: (sourceId: string) => void
+  setAllSources: (active: boolean) => void
+  
+  // Fase 3: Refresco de listas
+  refreshList: (listId: string) => Promise<void>
+  refreshAllLists: () => Promise<void>
 }
 
 function generateId(): string {
@@ -63,6 +74,8 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   isDarkMode: false,
   importedLists: [],
   activeListId: null,
+  activeSources: [],
+  isRefreshing: {},
   
   setChannel: (channel) => set({ currentChannel: channel, isPlaying: true }),
   
@@ -103,12 +116,13 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       const favorites = loadFromStorage<string[]>('iptv-favorites', [])
       const isDarkMode = loadFromStorage<boolean>('iptv-dark-mode', false)
       const importedLists = loadFromStorage<ImportedList[]>('iptv-imported-lists', [])
+      const activeSources = loadFromStorage<string[]>('iptv-active-sources', [])
       
       if (isDarkMode) {
         document.documentElement.classList.add('dark')
       }
       
-      set({ favorites, isDarkMode, importedLists })
+      set({ favorites, isDarkMode, importedLists, activeSources })
     }
   },
 
@@ -122,11 +136,14 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       channels,
       createdAt: new Date().toISOString(),
       sourceUrl,
+      lastRefreshed: sourceUrl ? new Date().toISOString() : undefined,
     }
     
     const updatedLists = [...state.importedLists, newList]
+    const updatedSources = [...state.activeSources, newList.id]
     saveToStorage('iptv-imported-lists', updatedLists)
-    set({ importedLists: updatedLists, activeListId: newList.id })
+    saveToStorage('iptv-active-sources', updatedSources)
+    set({ importedLists: updatedLists, activeListId: newList.id, activeSources: updatedSources })
     
     return newList.id
   },
@@ -140,12 +157,24 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ importedLists: updatedLists })
   },
 
+  setListDescription: (listId, description) => {
+    const state = get()
+    const updatedLists = state.importedLists.map(list =>
+      list.id === listId ? { ...list, description } : list
+    )
+    saveToStorage('iptv-imported-lists', updatedLists)
+    set({ importedLists: updatedLists })
+  },
+
   removeList: (listId) => {
     const state = get()
     const updatedLists = state.importedLists.filter(list => list.id !== listId)
+    const updatedSources = state.activeSources.filter(id => id !== listId)
     saveToStorage('iptv-imported-lists', updatedLists)
+    saveToStorage('iptv-active-sources', updatedSources)
     set({ 
       importedLists: updatedLists,
+      activeSources: updatedSources,
       activeListId: state.activeListId === listId ? null : state.activeListId,
       currentChannel: state.currentChannel?.id.startsWith(listId) ? null : state.currentChannel,
     })
@@ -236,5 +265,60 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     })
     
     return allChannels
+  },
+
+  // Fase 3: Múltiples fuentes
+  toggleSource: (sourceId) => {
+    const state = get()
+    const updated = state.activeSources.includes(sourceId)
+      ? state.activeSources.filter(id => id !== sourceId)
+      : [...state.activeSources, sourceId]
+    saveToStorage('iptv-active-sources', updated)
+    set({ activeSources: updated })
+  },
+
+  setAllSources: (active) => {
+    const state = get()
+    const updated = active
+      ? state.importedLists.map(l => l.id)
+      : []
+    saveToStorage('iptv-active-sources', updated)
+    set({ activeSources: updated })
+  },
+
+  // Fase 3: Refresco de listas
+  refreshList: async (listId) => {
+    const state = get()
+    const list = state.importedLists.find(l => l.id === listId)
+    if (!list?.sourceUrl) return
+
+    set({ isRefreshing: { ...state.isRefreshing, [listId]: true } })
+
+    try {
+      const res = await fetch(`/api/refresh-list?id=${encodeURIComponent(listId)}&url=${encodeURIComponent(list.sourceUrl)}`)
+      const result: { success: boolean; channels: Channel[]; error?: string } = await res.json()
+
+      if (result.success) {
+        const updatedLists = state.importedLists.map(l =>
+          l.id === listId
+            ? { ...l, channels: result.channels, lastRefreshed: new Date().toISOString() }
+            : l
+        )
+        saveToStorage('iptv-imported-lists', updatedLists)
+        set({ importedLists: updatedLists, isRefreshing: { ...get().isRefreshing, [listId]: false } })
+      } else {
+        set({ isRefreshing: { ...get().isRefreshing, [listId]: false } })
+        console.error('Refresh failed:', result.error)
+      }
+    } catch (error) {
+      set({ isRefreshing: { ...get().isRefreshing, [listId]: false } })
+      console.error('Refresh error:', error)
+    }
+  },
+
+  refreshAllLists: async () => {
+    const state = get()
+    const refreshable = state.importedLists.filter(l => l.sourceUrl)
+    await Promise.all(refreshable.map(l => get().refreshList(l.id)))
   },
 }))

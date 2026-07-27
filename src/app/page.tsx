@@ -11,6 +11,8 @@ import ChannelList from '@/components/ChannelList'
 import SearchBar from '@/components/SearchBar'
 import M3UImporter from '@/components/M3UImporter'
 import ImportedListsManager from '@/components/ImportedListsManager'
+import EPGPanel from '@/components/EPGPanel'
+
 
 export default function Home() {
   const [channels, setChannels] = useState<Channel[]>([])
@@ -21,12 +23,19 @@ export default function Home() {
   const [importedListsCollapseKey, setImportedListsCollapseKey] = useState(0)
   const [categoriesCollapsed, setCategoriesCollapsed] = useState(false)
 
-  const favorites = usePlayerStore((state) => state.favorites)
+  const [channelListOpen, setChannelListOpen] = useState(true)
+
   const importedLists = usePlayerStore((state) => state.importedLists)
   const activeListId = usePlayerStore((state) => state.activeListId)
+  const activeSources = usePlayerStore((state) => state.activeSources)
   const addImportedList = usePlayerStore((state) => state.addImportedList)
   const setActiveList = usePlayerStore((state) => state.setActiveList)
   const getFavoriteChannels = usePlayerStore((state) => state.getFavoriteChannels)
+
+  // Al deployar una lista, abrir la sidebar de canales
+  useEffect(() => {
+    if (activeListId) setChannelListOpen(true)
+  }, [activeListId])
 
   // Obtener canales activos: los de la lista seleccionada o los por defecto
   const activeChannels = useMemo(() => {
@@ -40,13 +49,14 @@ export default function Home() {
   // Canales favoritos de todas las listas
   const favoriteChannels = useMemo(() => {
     return getFavoriteChannels()
-  }, [favorites, importedLists, getFavoriteChannels])
+  }, [getFavoriteChannels])
 
-  // Consolidar canales por defecto y de todas las listas importadas
+  // Consolidar canales por defecto y de las listas activas
   const allAvailableChannels = useMemo(() => {
     const mergedChannels: Channel[] = [...channels]
 
     importedLists.forEach((list) => {
+      if (!activeSources.includes(list.id)) return
       list.channels.forEach((channel) => {
         if (!mergedChannels.some((existing) => existing.id === channel.id)) {
           mergedChannels.push(channel)
@@ -55,7 +65,7 @@ export default function Home() {
     })
 
     return mergedChannels
-  }, [channels, importedLists])
+  }, [channels, importedLists, activeSources])
 
   // Cargar canales desde la API
   useEffect(() => {
@@ -78,10 +88,10 @@ export default function Home() {
   }, [])
 
   // Manejar importación de lista M3U
-  const handleM3UImport = (m3uContent: string) => {
+  const handleM3UImport = (m3uContent: string, sourceUrl?: string) => {
     const importedChannels = parseM3U(m3uContent)
     if (importedChannels.length > 0) {
-      addImportedList(importedChannels)
+      addImportedList(importedChannels, sourceUrl)
     }
   }
 
@@ -136,142 +146,109 @@ export default function Home() {
   }, [showFavorites, favoriteChannels, allAvailableChannels])
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950 text-white">
+    <div className="h-screen bg-gradient-to-b from-slate-900 to-slate-950 text-white flex flex-col">
       <Header />
-      <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_minmax(0,1fr)] gap-6">
-          {/* Sidebar */}
-          <aside className="order-2 lg:order-1">
-            <div className="lg:sticky lg:top-24 space-y-4">
-              <SearchBar value={searchQuery} onChange={setSearchQuery} />
-              <div className="bg-gray-900/70 rounded-xl p-4 border border-gray-800 shadow-lg space-y-2">
-                {/* Favoritos */}
-                <button
-                  onClick={() => { setShowFavorites(!showFavorites); setSelectedCategory(null); collapseImportedLists() }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                    showFavorites ? 'bg-yellow-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill={showFavorites ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                    </svg>
-                    ⭐ Favoritos ({favoriteChannels.length})
-                  </div>
-                </button>
+      <main className="flex-1 w-full min-h-0 flex">
+        {/* Área lateral izquierda: barra superior + listas */}
+        <div className="h-full w-80 flex-shrink-0 border-r border-gray-800 flex flex-col">
+          {/* Barra superior tipo solapas */}
+          <div className="h-12 flex-shrink-0 bg-slate-900 border-b border-gray-800 flex items-center px-3 gap-1">
+            <button
+              onClick={() => setChannelListOpen(!channelListOpen)}
+              className="p-2 rounded-lg hover:bg-gray-800 transition-colors"
+              title={channelListOpen ? 'Cerrar canales' : 'Abrir canales'}
+            >
+              <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <div className="flex-1" />
+          </div>
 
-                {/* Canales por Defecto */}
-                <button
-                  onClick={() => {
-                    setActiveList(null)
-                    setShowFavorites(false)
-                    setSelectedCategory(null)
-                    setCategoriesCollapsed(true)
-                    collapseImportedLists()
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                    !activeListId && !showFavorites && !selectedCategory
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                    </svg>
-                    Canales por Defecto
-                  </div>
-                </button>
-
-                {/* Categorías */}
-                {activeCategories.length > 0 && !showFavorites && (
-                  <>
-                    <div className="border-t border-gray-700 my-2" />
-                    <button
-                      onClick={() => setCategoriesCollapsed((value) => !value)}
-                      className="w-full flex items-center justify-between px-3 mb-1 text-xs text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
-                      aria-expanded={!categoriesCollapsed}
-                    >
-                      <span>Categorías</span>
-                      <svg
-                        className={`w-3 h-3 transition-transform ${categoriesCollapsed ? '-rotate-90' : 'rotate-0'}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </button>
-                    {!categoriesCollapsed && activeCategories.map((cat) => (
-                      <button
-                        key={cat}
-                        onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                          selectedCategory === cat ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
-                        }`}
-                      >
-                        {cat}
+          {/* Contenido de listas + overlay de canales */}
+          <div className="flex-1 min-h-0 relative overflow-hidden bg-slate-900">
+            {channelListOpen && (
+              <div className="absolute inset-0 z-30 bg-slate-900 overflow-y-auto">
+                <div className="p-4 space-y-4">
+                  <SearchBar value={searchQuery} onChange={setSearchQuery} />
+                  {!searchQuery && (
+                    <div className="bg-gray-900/70 rounded-xl p-4 border border-gray-800 shadow-lg space-y-2">
+                      <button onClick={() => { setShowFavorites(!showFavorites); setSelectedCategory(null); collapseImportedLists() }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${showFavorites ? 'bg-yellow-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}>
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4" fill={showFavorites ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg> ⭐ Favoritos ({favoriteChannels.length})
+                        </div>
                       </button>
-                    ))}
-                  </>
-                )}
-
-                <div className="border-t border-gray-700 pt-2">
-                  <M3UImporter onImport={handleM3UImport} />
+                      <button onClick={() => { setActiveList(null); setShowFavorites(false); setSelectedCategory(null); setCategoriesCollapsed(true); collapseImportedLists() }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${!activeListId && !showFavorites && !selectedCategory ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}>
+                        <div className="flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                          </svg> Canales por Defecto
+                        </div>
+                      </button>
+                      {activeCategories.length > 0 && !showFavorites && (
+                        <><div className="border-t border-gray-700 my-2" />
+                          <button onClick={() => setCategoriesCollapsed((v) => !v)}
+                            className="w-full flex items-center justify-between px-3 mb-1 text-xs text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors">
+                            <span>Categorías</span>
+                            <svg className={`w-3 h-3 transition-transform ${categoriesCollapsed ? '-rotate-90' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                          {!categoriesCollapsed && activeCategories.map((cat) => (
+                            <button key={cat} onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${selectedCategory === cat ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}>{cat}</button>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
+                  <div className="bg-gray-900/70 rounded-xl border border-gray-800 p-4 shadow-lg">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-lg font-semibold text-white">{currentSourceName}</h2>
+                      <span className="text-sm text-gray-500">{filteredChannels.length} canales</span>
+                    </div>
+                    <ChannelList channels={filteredChannels} isLoading={isLoading && !activeListId} />
+                  </div>
                 </div>
-
+              </div>
+            )}
+            <div className="h-full overflow-y-auto">
+              <div className="p-4 space-y-4">
+                <h2 className="text-lg font-semibold text-white">Listas</h2>
+                <M3UImporter onImport={handleM3UImport} />
+                <div className="border-t border-gray-700" />
                 <ImportedListsManager collapseTrigger={importedListsCollapseKey} />
               </div>
             </div>
-          </aside>
+          </div>
+        </div>
 
-          {/* Contenido principal */}
-          <div className="order-1 lg:order-2 space-y-6">
+        {/* Contenido principal */}
+        <div className="flex-1 min-h-0 overflow-y-auto"
+          onClick={() => { if (channelListOpen) setChannelListOpen(false) }}
+        >
+          <div className="h-full max-w-7xl mx-auto space-y-6 p-4 lg:p-6">
             <div className="bg-gray-900/70 rounded-xl border border-gray-800 overflow-hidden shadow-lg">
               <Player />
             </div>
+            <EPGPanel />
 
-            {/* Móvil */}
             <div className="lg:hidden space-y-3">
               <SearchBar value={searchQuery} onChange={setSearchQuery} />
               <div className="flex gap-2 overflow-x-auto pb-2">
-                <button
-                  onClick={() => { setSelectedCategory(null); setShowFavorites(false); setActiveList(null); setCategoriesCollapsed(true); collapseImportedLists() }}
-                  className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${
-                    !selectedCategory && !showFavorites && !activeListId ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'
-                  }`}
-                >
-                  Todos
-                </button>
-                <button
-                  onClick={() => { setShowFavorites(!showFavorites); collapseImportedLists() }}
-                  className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${
-                    showFavorites ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'
-                  }`}
-                >
-                  ⭐ Favoritos
-                </button>
+                <button onClick={() => { setSelectedCategory(null); setShowFavorites(false); setActiveList(null); setCategoriesCollapsed(true); collapseImportedLists() }}
+                  className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${!selectedCategory && !showFavorites && !activeListId ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>Todos</button>
+                <button onClick={() => { setShowFavorites(!showFavorites); collapseImportedLists() }}
+                  className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${showFavorites ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>⭐ Favoritos</button>
                 {activeCategories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
-                    className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${
-                      selectedCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    {cat}
-                  </button>
+                  <button key={cat} onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                    className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${selectedCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>{cat}</button>
                 ))}
               </div>
-            </div>
-
-            {/* Lista de canales */}
-            <div className="bg-gray-900/70 rounded-xl border border-gray-800 p-4 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white">{currentSourceName}</h2>
-                <span className="text-sm text-gray-500">{filteredChannels.length} canales</span>
-              </div>
-              <ChannelList channels={filteredChannels} isLoading={isLoading && !activeListId} />
             </div>
           </div>
         </div>

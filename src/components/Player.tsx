@@ -4,18 +4,11 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Hls from 'hls.js'
 import { usePlayerStore } from '@/store/player-store'
 
-/**
- * Reproductor de video basado en HLS.js.
- * 
- * HLS.js descarga el playlist y los segmentos .ts
- * y los reproduce en un elemento <video> nativo.
- * 
- * Este componente maneja:
- * - Carga de streams HLS
- * - Detección de errores (stream caído)
- * - Estados de carga
- * - Limpieza de recursos al cambiar de canal
- */
+function getProxyUrl(url: string): string {
+  if (!url.startsWith('http')) return url
+  return `/api/stream-proxy?url=${encodeURIComponent(url)}`
+}
+
 export default function Player() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const hlsRef = useRef<Hls | null>(null)
@@ -41,11 +34,9 @@ export default function Player() {
     setError(null)
     destroyHls()
 
-    const url = currentChannel.url
+    const url = getProxyUrl(currentChannel.url)
 
-    // Verificar si el navegador soporta HLS nativamente (Safari)
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari reproduce HLS nativamente
       video.src = url
       video.addEventListener('loadedmetadata', () => setIsLoading(false))
       video.addEventListener('error', () => {
@@ -53,7 +44,6 @@ export default function Player() {
         setIsLoading(false)
       })
     } else if (Hls.isSupported()) {
-      // Navegadores modernos (Chrome, Firefox, Edge) usan HLS.js
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: true,
@@ -68,7 +58,6 @@ export default function Player() {
         setIsLoading(false)
         if (isPlaying) {
           video.play().catch(() => {
-            // Autoplay bloqueado por el navegador
             setError('Haz clic para reproducir')
           })
         }
@@ -97,7 +86,8 @@ export default function Player() {
     return () => {
       destroyHls()
     }
-  }, [currentChannel, destroyHls, isPlaying])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentChannel, destroyHls])
 
   // Controlar play/pause
   useEffect(() => {
