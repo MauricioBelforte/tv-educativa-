@@ -1,0 +1,100 @@
+{
+  "channels": [
+    {
+      "id": "nasa-tv",
+      "name": "NASA TV",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/NASA_logo.svg/80px-NASA_logo.svg.png",
+      "url": "https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8",
+      "category": "Ciencia",
+      "isLive": true
+    },
+    {
+      "id": "nasa-2",
+      "name": "NASA TV Media",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/NASA_logo.svg/80px-NASA_logo.svg.png",
+      "url": "https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8",
+      "category": "Ciencia",
+      "isLive": true
+    },
+    {
+      "id": "sintel",
+      "name": "Sintel (Blender)",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Blender_logo_no_text.svg/80px-Blender_logo_no_text.svg.png",
+      "url": "https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8",
+      "category": "Películas",
+      "isLive": false
+    },
+    {
+      "id": "tears-of-steel",
+      "name": "Tears of Steel",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/Blender_logo_no_text.svg/80px-Blender_logo_no_text.svg.png",
+      "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      "category": "Películas",
+      "isLive": false
+    },
+    {
+      "id": "big-buck-bunny",
+      "name": "Big Buck Bunny",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Big_buck_bunny_poster_big.jpg/80px-Big_buck_bunny_poster_big.jpg",
+      "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+      "category": "Películas",
+      "isLive": false
+    },
+    {
+      "id": "tele-quebec",
+      "name": "Télé-Québec",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/Tele-Quebec_2019.svg/80px-Tele-Quebec_2019.svg.png",
+      "url": "https://mnmedias.api.telequebec.tv/m3u8/29880.m3u8",
+      "category": "Educativo",
+      "isLive": true
+    },
+    {
+      "id": "akamai-test",
+      "name": "Stream Demo HD",
+      "logo": "https://via.placeholder.com/80x80/3b82f6/ffffff?text=HD",
+      "url": "https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8",
+      "category": "Prueba",
+      "isLive": true
+    },
+    {
+      "id": "unified-test",
+      "name": "Demo Streaming 4K",
+      "logo": "https://via.placeholder.com/80x80/8b5cf6/ffffff?text=4K",
+      "url": "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8",
+      "category": "Prueba",
+      "isLive": false
+    },
+    {
+      "id": "mux-test-1",
+      "name": "Canal Demo 1",
+      "logo": "https://via.placeholder.com/80x80/10b981/ffffff?text=D1",
+      "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+      "category": "Prueba",
+      "isLive": false
+    },
+    {
+      "id": "mux-test-2",
+      "name": "Canal Demo 2",
+      "logo": " ",
+      "url": "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8",
+      "category": "Prueba",
+      "isLive": false
+    },
+    {
+      "id": "arte-tv",
+      "name": "ARTE TV (Francia)",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/ARTE_Logo_2017.svg/80px-ARTE_Logo_2017.svg.png",
+      "url": "https://artelive-lh.akamaihd.net/i/artelive_1@319567/master.m3u8",
+      "category": "Cultural",
+      "isLive": true
+    },
+    {
+      "id": "euro-news",
+      "name": "Euronews (Live)",
+      "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Euronews_2018.svg/80px-Euronews_2018.svg.png",
+      "url": "https://euronews-live-hls.akamaized.net/live/stream01/stream01.m3u8",
+      "category": "Noticias",
+      "isLive": true
+    }
+  ]
+}
