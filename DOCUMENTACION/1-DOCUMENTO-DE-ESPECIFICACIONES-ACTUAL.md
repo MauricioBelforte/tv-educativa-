@@ -34,6 +34,7 @@ Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Pro
 19. Categorías colapsadas por defecto
 20. Búsqueda integrada en Header
 21. Listas privadas desde variables de entorno (Vercel), soporta contenido base64, URL, o URL con Basic Auth. Nunca se exponen al cliente.
+22. Sincronizacion automatica entre local y Vercel via Supabase (PostgreSQL gratis). Boton "Subir listas a la nube" y carga automatica al iniciar.
 
 ## API
 - `GET /api/channels` - Lista de canales
@@ -45,3 +46,5 @@ Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Pro
 - `GET /api/m3u-proxy?url=X` - Proxy de descarga de listas
 - `GET /api/check-stream?url=X&deep=true` - Verificación de salud del stream
 - `GET /api/private-lists` - Listas privadas desde variables de entorno (Vercel)
+- `GET /api/sync-lists` - Descargar listas sincronizadas desde Supabase
+- `POST /api/sync-lists` - Subir listas a Supabase

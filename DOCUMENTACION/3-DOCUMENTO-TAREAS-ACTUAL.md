@@ -68,3 +68,13 @@
 - [x] Actualizacion de .env.local con instrucciones para Vercel
 - [x] Build de prueba exitoso
 - [x] Documentacion actualizada
+
+### Fase 6 - Sincronizacion con Supabase (Completada)
+- [x] Instalacion de @supabase/supabase-js
+- [x] Creacion de cliente Supabase server-side (src/lib/supabase.ts)
+- [x] API /api/sync-lists (GET: descargar, POST: subir)
+- [x] Carga automatica de listas sincronizadas al iniciar la app
+- [x] Boton "Subir listas a la nube" en la sidebar
+- [x] SQL de creacion de tabla sync_data documentado
+- [x] Actualizacion de .env.local con instrucciones de configuracion
+- [x] Documentacion actualizada

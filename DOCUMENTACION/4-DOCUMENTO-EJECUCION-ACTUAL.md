@@ -71,6 +71,8 @@ src/
 | `GET /api/m3u-proxy` | Proxy de descarga M3U | `url` |
 | `GET /api/check-stream` | Verificacion de salud del stream | `url`, `deep` (opcional) |
 | `GET /api/private-lists` | Listas privadas desde env vars (Vercel) | (ninguno, usa variables de entorno) |
+| `GET /api/sync-lists` | Descargar listas sincronizadas desde Supabase | (ninguno) |
+| `POST /api/sync-lists` | Subir listas a Supabase | Body: `{ lists: [...] }` |
 
 ## Store (Zustand) - Acciones Principales
 
@@ -115,7 +117,37 @@ src/
 - zustand@4.5.x
 - tailwindcss@3.4.x
 
-## Listas Privadas (Vercel)
+## Supabase — Sincronizacion Automatica
+
+Permite que las listas que agregues en local aparezcan automaticamente en Vercel y viceversa.
+
+### Configuracion
+
+1. Crear cuenta gratis en https://supabase.com
+2. Crear un proyecto
+3. Ir a Project Settings > API, copiar **Project URL** y **service_role key**
+4. Configurar en `.env.local` (local) y en Environment Variables de Vercel:
+   ```
+   SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+   SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIs...
+   ```
+5. En el SQL Editor de Supabase, ejecutar:
+   ```sql
+   CREATE TABLE sync_data (
+     id INTEGER PRIMARY KEY DEFAULT 1,
+     data JSONB NOT NULL,
+     updated_at TIMESTAMPTZ DEFAULT NOW()
+   );
+   INSERT INTO sync_data (id, data) VALUES (1, '[]'::jsonb);
+   ```
+
+### Uso
+
+- Boton **"Subir listas a la nube"** en la sidebar → sube todas las listas importadas a Supabase
+- Al cargar la app en cualquier lado (local o Vercel), las listas sincronizadas se descargan automaticamente
+- Las URLs de las listas originales no se comparten, solo los canales parseados
+
+## Listas Privadas (Vercel — opcional, sin Supabase)
 
 Para no exponer URLs de listas M3U en el navegador, se pueden configurar como variables de entorno en Vercel:
 

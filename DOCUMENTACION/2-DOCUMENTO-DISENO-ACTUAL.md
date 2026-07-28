@@ -59,3 +59,11 @@
 - `GET /api/check-stream` → Verificación de salud (8s timeout, 12s si deep)
   - `deep=false` (default): valida que el .m3u8 responda y contenga #EXTM3U
   - `deep=true`: además parsea y descarga el primer segmento
+- `GET /api/private-lists` → Listas desde env vars (base64/URL/auth)
+- `GET /api/sync-lists` → Descargar listas desde Supabase
+- `POST /api/sync-lists` → Subir listas a Supabase
+
+## Infraestructura Adicional
+- **Supabase**: PostgreSQL gratis para sincronización entre local y producción
+- **Tabla `sync_data`**: JSONB con las listas serializadas
+- **Cliente server-side**: `src/lib/supabase.ts` usa service_role key (nunca expuesta)
