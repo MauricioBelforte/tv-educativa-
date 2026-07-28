@@ -24,6 +24,8 @@ export interface ImportedList {
   createdAt: string
   sourceUrl?: string
   lastRefreshed?: string
+  /** Indica que la lista proviene de variables de entorno (Vercel) y su URL no se expone al cliente */
+  isPrivate?: boolean
 }
 
 export interface EPGEntry {

@@ -33,6 +33,7 @@ Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Pro
 18. Descripciones editables en listas importadas
 19. Categorías colapsadas por defecto
 20. Búsqueda integrada en Header
+21. Listas privadas desde variables de entorno (Vercel), las URLs con credenciales nunca se exponen al cliente
 
 ## API
 - `GET /api/channels` - Lista de canales
@@ -43,3 +44,4 @@ Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Pro
 - `GET /api/epg?channel=X` - Datos de programación EPG
 - `GET /api/m3u-proxy?url=X` - Proxy de descarga de listas
 - `GET /api/check-stream?url=X&deep=true` - Verificación de salud del stream
+- `GET /api/private-lists` - Listas privadas desde variables de entorno (Vercel)

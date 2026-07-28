@@ -91,9 +91,26 @@ export default function Home() {
       } catch (error) {
         console.error('Error loading channels:', error)
         setChannels(fallbackChannels)
-      } finally {
-        setIsLoading(false)
       }
+
+      // Cargar listas privadas desde variables de entorno (Vercel)
+      try {
+        const privRes = await fetch('/api/private-lists')
+        if (privRes.ok) {
+          const privateLists: { name: string; channels: Channel[] }[] = await privRes.json()
+          const existing = usePlayerStore.getState().importedLists
+          for (const pl of privateLists) {
+            const exists = existing.some(l => l.isPrivate && l.name === pl.name)
+            if (!exists && pl.channels.length > 0) {
+              addImportedList(pl.channels, pl.name, true)
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading private lists:', error)
+      }
+
+      setIsLoading(false)
     }
     loadChannels()
   }, [])
@@ -110,7 +127,7 @@ export default function Home() {
   const handleM3UImport = (m3uContent: string, sourceUrl?: string) => {
     const importedChannels = parseM3U(m3uContent)
     if (importedChannels.length > 0) {
-      addImportedList(importedChannels, sourceUrl)
+      addImportedList(importedChannels, sourceUrl, false)
     }
   }
 

@@ -56,3 +56,14 @@
 - [x] Escaneo rapido escanea TODAS las listas (no solo activas)
 - [x] Primer build exitoso con todos los cambios
 - [x] Commit y push a GitHub
+
+### Fase 5 - Deploy y Listas Privadas (Completada)
+- [x] Creacion de vercel.json para configuracion de deploy
+- [x] API /api/private-lists para servir listas desde variables de entorno
+- [x] Endpoint privado que oculta URLs y credenciales del navegador
+- [x] Soporte de Basic Auth en listas privadas (PRIVATE_LIST_N_AUTH)
+- [x] Carga automatica de listas privadas al iniciar la app
+- [x] Campo isPrivate en ImportedList para evitar duplicados
+- [x] Actualizacion de .env.local con instrucciones para Vercel
+- [x] Build de prueba exitoso
+- [x] Documentacion actualizada

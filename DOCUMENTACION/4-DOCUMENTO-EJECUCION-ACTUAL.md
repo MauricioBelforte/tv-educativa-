@@ -70,6 +70,7 @@ src/
 | `GET /api/epg` | Guia de programacion | `channel` |
 | `GET /api/m3u-proxy` | Proxy de descarga M3U | `url` |
 | `GET /api/check-stream` | Verificacion de salud del stream | `url`, `deep` (opcional) |
+| `GET /api/private-lists` | Listas privadas desde env vars (Vercel) | (ninguno, usa variables de entorno) |
 
 ## Store (Zustand) - Acciones Principales
 
@@ -113,6 +114,22 @@ src/
 - hls.js@1.5.x
 - zustand@4.5.x
 - tailwindcss@3.4.x
+
+## Listas Privadas (Vercel)
+
+Para no exponer URLs de listas M3U en el navegador, se pueden configurar como variables de entorno en Vercel:
+
+```env
+PRIVATE_LIST_1_URL=https://miservidor.com/lista.m3u
+PRIVATE_LIST_1_NAME=Deportes             (opcional)
+PRIVATE_LIST_1_AUTH=usuario:contrasenia  (opcional, Basic Auth)
+PRIVATE_LIST_2_URL=https://...
+# ... incrementar numero
+```
+
+- Las URLs y credenciales nunca salen del servidor
+- Se cargan automaticamente al iniciar la app via `/api/private-lists`
+- Cada lista aparece como una lista importada en el gestor
 
 ## Carpetas Locales (No se suben a GitHub)
 - `local/` -> Archivos .m3u para carga automatica
