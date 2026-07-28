@@ -119,15 +119,31 @@ src/
 
 Para no exponer URLs de listas M3U en el navegador, se pueden configurar como variables de entorno en Vercel:
 
-```env
-PRIVATE_LIST_1_URL=https://miservidor.com/lista.m3u
-PRIVATE_LIST_1_NAME=Deportes             (opcional)
-PRIVATE_LIST_1_AUTH=usuario:contrasenia  (opcional, Basic Auth)
-PRIVATE_LIST_2_URL=https://...
-# ... incrementar numero
+### Opcion A — Contenido directo (base64) — NO necesitas servidor
+
+1. Abri tu `.m3u` en un editor, convertilo a base64:
+   - Windows: `certutil -encode mi-lista.m3u output.txt`
+   - Linux/Mac: `cat mi-lista.m3u | base64`
+2. En las env vars de Vercel:
+   ```
+   PRIVATE_LIST_1_CONTENT=Y29udGVuaWRvIGRlbCAubTN1...
+   PRIVATE_LIST_1_NAME=Mi Lista
+   ```
+
+### Opcion B — Desde URL (sin auth)
+```
+PRIVATE_LIST_1_URL=https://ejemplo.com/lista.m3u
+PRIVATE_LIST_1_NAME=Deportes
 ```
 
-- Las URLs y credenciales nunca salen del servidor
+### Opcion C — Desde URL con Basic Auth
+```
+PRIVATE_LIST_1_URL=https://ejemplo.com/lista.m3u
+PRIVATE_LIST_1_NAME=Deportes
+PRIVATE_LIST_1_AUTH=usuario:contrasenia
+```
+
+- URLs, credenciales y contenido nunca salen del servidor
 - Se cargan automaticamente al iniciar la app via `/api/private-lists`
 - Cada lista aparece como una lista importada en el gestor
 

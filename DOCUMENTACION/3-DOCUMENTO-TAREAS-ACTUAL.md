@@ -61,7 +61,8 @@
 - [x] Creacion de vercel.json para configuracion de deploy
 - [x] API /api/private-lists para servir listas desde variables de entorno
 - [x] Endpoint privado que oculta URLs y credenciales del navegador
-- [x] Soporte de Basic Auth en listas privadas (PRIVATE_LIST_N_AUTH)
+- [x] Soporte de contenido base64 directo (PRIVATE_LIST_N_CONTENT) — no requiere servidor externo
+- [x] Soporte de URL (PRIVATE_LIST_N_URL) y URL con Basic Auth (PRIVATE_LIST_N_AUTH)
 - [x] Carga automatica de listas privadas al iniciar la app
 - [x] Campo isPrivate en ImportedList para evitar duplicados
 - [x] Actualizacion de .env.local con instrucciones para Vercel
