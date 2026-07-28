@@ -1,6 +1,6 @@
 # Tareas Actuales - TV Educativa
 
-## Estado General: COMPLETADO ✅
+## Estado General: COMPLETADO
 
 ### Fase 1 - Core (Completada)
 - [x] Setup del proyecto Next.js + Tailwind + TypeScript
@@ -15,23 +15,44 @@
 - [x] Componente SearchBar
 - [x] Componente CategoryFilter
 - [x] Componente Header
-- [x] Página principal (page.tsx)
+- [x] Pagina principal (page.tsx)
 - [x] Layout global (layout.tsx)
 
 ### Fase 2 - UX (Completada)
 - [x] Modo oscuro con persistencia
 - [x] Favoritos con persistencia
-- [x] Diseño responsive (móvil + desktop)
+- [x] Diseno responsive (movil + desktop)
 - [x] Loading skeletons
 - [x] Manejo de errores de stream
-- [x] Búsqueda en vivo
-- [x] Filtro por categorías
+- [x] Busqueda en vivo
+- [x] Filtro por categorias
 
-### Fase 3 - Features Avanzadas (Completada ✅)
+### Fase 3 - Features Avanzadas (Completada)
 - [x] Proxy de streams para evitar CORS (/api/stream-proxy)
-- [x] Actualización automática y manual de listas M3U (/api/refresh-list)
-- [x] Múltiples fuentes de canales (SourceFilter, activeSources)
+- [x] Actualizacion automatica y manual de listas M3U (/api/refresh-list)
+- [x] Multiples fuentes de canales (SourceFilter, activeSources)
 - [x] Carga de listas M3U desde URL con persistencia
-- [x] EPG - Guía de Programación Electrónica (/api/epg + EPGPanel)
-- [x] Documentación del componente 02-Fase3-Features-Avanzadas
+- [x] EPG - Guia de Programacion Electronica (/api/epg + EPGPanel)
+- [x] Documentacion del componente 02-Fase3-Features-Avanzadas
 - [x] Plan de testings actualizado
+
+### Fase 4 - Verificacion y UX Final (Completada)
+- [x] Eliminacion de referencias a sitios de streaming no educativos
+- [x] Verificacion de salud de canales (/api/check-stream)
+- [x] Verificacion deep (descarga de primer segmento HLS)
+- [x] Dos modos de escaneo: rapido (20 workers, deep) y lento (2 workers, sin deep)
+- [x] Estado de canales persistido en localStorage
+- [x] Rediseno layout: sidebar con barra superior tipo pestanas
+- [x] Overlay de canales como absolute dentro del sidebar
+- [x] SourceFilter eliminado, checkboxes integrados en ImportedListsManager
+- [x] SearchBar movida al Header
+- [x] Filtro "Solo activos" con toggle (activo por defecto)
+- [x] Categorias colapsadas por defecto
+- [x] Favoritos movido a la barra superior del sidebar
+- [x] Reordenamiento drag & drop de listas
+- [x] Importacion batch de listas (textarea multilinea)
+- [x] Descripciones editables en listas importadas
+- [x] "Canales por Defecto" como ultimo item en el gestor de listas
+- [x] Escaneo rapido escanea TODAS las listas (no solo activas)
+- [x] Primer build exitoso con todos los cambios
+- [x] Commit y push a GitHub

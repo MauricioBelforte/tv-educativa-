@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { usePlayerStore } from '@/store/player-store'
+import channelsData from '@/data/channels.json'
+import { Channel } from '@/lib/types'
 
 interface ImportedListsManagerProps {
   collapseTrigger?: number
@@ -17,7 +19,7 @@ export default function ImportedListsManager({ collapseTrigger = 0 }: ImportedLi
   const renameList = usePlayerStore((state) => state.renameList)
   const setListDescription = usePlayerStore((state) => state.setListDescription)
   const removeList = usePlayerStore((state) => state.removeList)
-
+  const reorderLists = usePlayerStore((state) => state.reorderLists)
   const refreshList = usePlayerStore((state) => state.refreshList)
   const isRefreshing = usePlayerStore((state) => state.isRefreshing)
 
@@ -27,9 +29,14 @@ export default function ImportedListsManager({ collapseTrigger = 0 }: ImportedLi
   const [editDesc, setEditDesc] = useState('')
   const [expandedListId, setExpandedListId] = useState<string | null>(null)
 
+  const dragIndex = useRef<number | null>(null)
+  const dragOverIndex = useRef<number | null>(null)
+
   useEffect(() => {
     setExpandedListId(null)
   }, [collapseTrigger])
+
+
 
   const formatLastRefreshed = (iso?: string) => {
     if (!iso) return 'Nunca'
@@ -48,8 +55,6 @@ export default function ImportedListsManager({ collapseTrigger = 0 }: ImportedLi
     }
   }
 
-  if (importedLists.length === 0) return null
-
   const handleStartRename = (list: { id: string, name: string }) => {
     setEditingListId(list.id)
     setEditName(list.name)
@@ -62,30 +67,50 @@ export default function ImportedListsManager({ collapseTrigger = 0 }: ImportedLi
     setEditingListId(null)
   }
 
+  const defaultChannels = (channelsData.channels as Channel[]) || []
+
   return (
     <div className="space-y-2">
-      <div className="border-t border-gray-700 pt-2 mt-2">
-        <div className="flex items-center justify-between px-3 mb-1">
-          <p className="text-xs text-gray-500 uppercase tracking-wider">
-            Mis Listas ({importedLists.length})
-          </p>
-          {importedLists.length >= 2 && (
-            <button
-              onClick={() => setAllSources(activeSources.length !== importedLists.length)}
-              className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
-            >
-              {activeSources.length === importedLists.length ? 'Deseleccionar todas' : 'Seleccionar todas'}
-            </button>
-          )}
+      {importedLists.length > 0 && (
+        <div className="border-t border-gray-700 pt-2 mt-2">
+          <div className="flex items-center justify-between px-3 mb-1">
+            <p className="text-xs text-gray-500 uppercase tracking-wider">
+              Mis Listas ({importedLists.length})
+            </p>
+            {importedLists.length >= 2 && (
+              <button
+                onClick={() => setAllSources(activeSources.length !== importedLists.length)}
+                className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
+              >
+                {activeSources.length === importedLists.length ? 'Deseleccionar todas' : 'Seleccionar todas'}
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {importedLists.map((list) => {
+      {importedLists.map((list, index) => {
         const isActive = activeSources.includes(list.id)
         return (
-        <div key={list.id} className="rounded-lg overflow-hidden">
+        <div
+          key={list.id}
+          draggable
+          onDragStart={() => { dragIndex.current = index }}
+          onDragOver={(e) => {
+            e.preventDefault()
+            dragOverIndex.current = index
+          }}
+          onDragEnd={() => {
+            if (dragIndex.current !== null && dragOverIndex.current !== null && dragIndex.current !== dragOverIndex.current) {
+              reorderLists(dragIndex.current, dragOverIndex.current)
+            }
+            dragIndex.current = null
+            dragOverIndex.current = null
+          }}
+          className={`rounded-lg overflow-hidden transition-opacity ${dragIndex.current === index ? 'opacity-50' : ''}`}
+        >
           {/* Header de la lista (carpeta) */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-800/50 hover:bg-gray-800 transition-colors rounded-lg">
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-800/50 hover:bg-gray-800 transition-colors rounded-lg cursor-grab active:cursor-grabbing">
             {/* Checkbox — activar/desactivar fuente */}
             <input
               type="checkbox"
@@ -251,6 +276,28 @@ export default function ImportedListsManager({ collapseTrigger = 0 }: ImportedLi
           {/* Canales NO se listan acá — solo van a la sidebar de canales */}
         </div>
       )})}
+
+      {/* Lista de Canales por Defecto — siempre al final */}
+      <div className={`rounded-lg overflow-hidden`}>
+        <div
+          onClick={() => setActiveList(null)}
+          className={`flex items-center gap-2 px-3 py-2 bg-gray-800/50 hover:bg-gray-800 transition-colors rounded-lg cursor-pointer ${
+            activeListId === null ? 'ring-1 ring-blue-500' : ''
+          }`}
+        >
+          <div className="w-4 h-4 flex items-center justify-center flex-shrink-0">
+            <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+          </div>
+          <span className={`text-sm flex-1 ${activeListId === null ? 'text-blue-400 font-medium' : 'text-gray-300'}`}>
+            Canales por Defecto
+          </span>
+          <span className="text-xs text-gray-500">
+            {defaultChannels.length}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }

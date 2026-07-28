@@ -8,7 +8,6 @@ import channelsData from '@/data/channels.json'
 import Header from '@/components/Header'
 import Player from '@/components/Player'
 import ChannelList from '@/components/ChannelList'
-import SearchBar from '@/components/SearchBar'
 import M3UImporter from '@/components/M3UImporter'
 import ImportedListsManager from '@/components/ImportedListsManager'
 import EPGPanel from '@/components/EPGPanel'
@@ -21,35 +20,47 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [showFavorites, setShowFavorites] = useState(false)
   const [importedListsCollapseKey, setImportedListsCollapseKey] = useState(0)
-  const [categoriesCollapsed, setCategoriesCollapsed] = useState(false)
+  const [categoriesCollapsed, setCategoriesCollapsed] = useState(true)
 
   const [channelListOpen, setChannelListOpen] = useState(true)
+  const [showOnlineOnly, setShowOnlineOnly] = useState(true)
 
   const importedLists = usePlayerStore((state) => state.importedLists)
   const activeListId = usePlayerStore((state) => state.activeListId)
   const activeSources = usePlayerStore((state) => state.activeSources)
+  const channelStatus = usePlayerStore((state) => state.channelStatus)
+  const favorites = usePlayerStore((state) => state.favorites)
+  const checkAllChannels = usePlayerStore((state) => state.checkAllChannels)
+  const recheckAllChannels = usePlayerStore((state) => state.recheckAllChannels)
+  const fastRecheckAllChannels = usePlayerStore((state) => state.fastRecheckAllChannels)
   const addImportedList = usePlayerStore((state) => state.addImportedList)
   const setActiveList = usePlayerStore((state) => state.setActiveList)
-  const getFavoriteChannels = usePlayerStore((state) => state.getFavoriteChannels)
 
   // Al deployar una lista, abrir la sidebar de canales
   useEffect(() => {
     if (activeListId) setChannelListOpen(true)
   }, [activeListId])
 
-  // Obtener canales activos: los de la lista seleccionada o los por defecto
+  // Obtener canales activos: los de la lista seleccionada, o los por defecto si está vacía
   const activeChannels = useMemo(() => {
     if (activeListId) {
       const list = importedLists.find(l => l.id === activeListId)
-      return list?.channels || []
+      const listChannels = list?.channels || []
+      if (listChannels.length > 0) return listChannels
     }
     return channels
   }, [activeListId, importedLists, channels])
 
-  // Canales favoritos de todas las listas
+  // Canales favoritos de todas las listas (incluye canales por defecto)
   const favoriteChannels = useMemo(() => {
-    return getFavoriteChannels()
-  }, [getFavoriteChannels])
+    const all: Channel[] = []
+    const addIfFavorite = (ch: Channel) => {
+      if (favorites.includes(ch.id) && !all.some(c => c.id === ch.id)) all.push(ch)
+    }
+    channels.forEach(addIfFavorite)
+    importedLists.forEach(list => list.channels.forEach(addIfFavorite))
+    return all
+  }, [favorites, channels, importedLists])
 
   // Consolidar canales por defecto y de las listas activas
   const allAvailableChannels = useMemo(() => {
@@ -86,6 +97,14 @@ export default function Home() {
     }
     loadChannels()
   }, [])
+
+  // Verificar estado de canales en lotes de 5 (solo listas con checkbox)
+  useEffect(() => {
+    if (isLoading) return
+    const pending = allAvailableChannels.filter(c => c.url && !channelStatus[c.id])
+    if (pending.length === 0) return
+    checkAllChannels(pending.map(c => ({ id: c.id, url: c.url! })))
+  }, [allAvailableChannels, isLoading, checkAllChannels])
 
   // Manejar importación de lista M3U
   const handleM3UImport = (m3uContent: string, sourceUrl?: string) => {
@@ -136,8 +155,15 @@ export default function Home() {
       result = result.filter(c => c.name.toLowerCase().includes(query))
     }
 
+    if (showOnlineOnly) {
+      result = result.filter(c => {
+        const s = channelStatus[c.id]
+        return s === 'online' || s === 'checking' || s === undefined
+      })
+    }
+
     return result
-  }, [displayChannels, selectedCategory, searchQuery, showFavorites])
+  }, [displayChannels, selectedCategory, searchQuery, showFavorites, showOnlineOnly, channelStatus])
 
   // Extraer categorías de los canales disponibles para filtrar
   const activeCategories = useMemo(() => {
@@ -147,7 +173,7 @@ export default function Home() {
 
   return (
     <div className="h-screen bg-gradient-to-b from-slate-900 to-slate-950 text-white flex flex-col">
-      <Header />
+      <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <main className="flex-1 w-full min-h-0 flex">
         {/* Área lateral izquierda: barra superior + listas */}
         <div className="h-full w-80 flex-shrink-0 border-r border-gray-800 flex flex-col">
@@ -162,6 +188,31 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
+            <button
+              onClick={() => { setShowFavorites(!showFavorites); setSelectedCategory(null); collapseImportedLists() }}
+              className={`p-2 rounded-lg transition-colors ${showFavorites ? 'text-yellow-400 hover:text-yellow-300' : 'text-gray-500 hover:text-gray-300'}`}
+              title={showFavorites ? 'Ver lista actual' : 'Ver favoritos'}
+            >
+              <svg className="w-5 h-5" fill={showFavorites ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+              </svg>
+            </button>
+            <button
+              onClick={() => {
+                const all: { id: string; url: string }[] = []
+                const seen = new Set<string>()
+                const add = (id: string, url: string) => { if (url && !seen.has(id)) { seen.add(id); all.push({ id, url }) } }
+                channels.forEach(c => add(c.id, c.url))
+                importedLists.forEach(l => l.channels.forEach(c => add(c.id, c.url)))
+                fastRecheckAllChannels(all)
+              }}
+              className="p-2 rounded-lg text-gray-500 hover:text-blue-400 transition-colors"
+              title="Escanear todos los canales (rápido)"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
             <div className="flex-1" />
           </div>
 
@@ -170,23 +221,14 @@ export default function Home() {
             {channelListOpen && (
               <div className="absolute inset-0 z-30 bg-slate-900 overflow-y-auto">
                 <div className="p-4 space-y-4">
-                  <SearchBar value={searchQuery} onChange={setSearchQuery} />
                   {!searchQuery && (
                     <div className="bg-gray-900/70 rounded-xl p-4 border border-gray-800 shadow-lg space-y-2">
-                      <button onClick={() => { setShowFavorites(!showFavorites); setSelectedCategory(null); collapseImportedLists() }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${showFavorites ? 'bg-yellow-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}>
+
+                      <button onClick={() => { setShowOnlineOnly(!showOnlineOnly); setSelectedCategory(null); setShowFavorites(false) }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${showOnlineOnly ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}>
                         <div className="flex items-center gap-2">
-                          <svg className="w-4 h-4" fill={showFavorites ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                          </svg> ⭐ Favoritos ({favoriteChannels.length})
-                        </div>
-                      </button>
-                      <button onClick={() => { setActiveList(null); setShowFavorites(false); setSelectedCategory(null); setCategoriesCollapsed(true); collapseImportedLists() }}
-                        className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${!activeListId && !showFavorites && !selectedCategory ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}>
-                        <div className="flex items-center gap-2">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                          </svg> Canales por Defecto
+                          <span className={`w-3 h-3 rounded-full ${showOnlineOnly ? 'bg-green-400' : 'bg-gray-500'}`} />
+                          Solo activos
                         </div>
                       </button>
                       {activeCategories.length > 0 && !showFavorites && (
@@ -209,7 +251,18 @@ export default function Home() {
                   <div className="bg-gray-900/70 rounded-xl border border-gray-800 p-4 shadow-lg">
                     <div className="flex items-center justify-between mb-4">
                       <h2 className="text-lg font-semibold text-white">{currentSourceName}</h2>
-                      <span className="text-sm text-gray-500">{filteredChannels.length} canales</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">{filteredChannels.length} canales</span>
+                        <button
+                          onClick={() => recheckAllChannels(allAvailableChannels.map(c => ({ id: c.id, url: c.url })))}
+                          className="p-1 rounded-lg text-gray-500 hover:text-blue-400 transition-colors"
+                          title="Escaneo lento sin bloqueo"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                        </button>
+                      </div>
                     </div>
                     <ChannelList channels={filteredChannels} isLoading={isLoading && !activeListId} />
                   </div>
@@ -238,7 +291,6 @@ export default function Home() {
             <EPGPanel />
 
             <div className="lg:hidden space-y-3">
-              <SearchBar value={searchQuery} onChange={setSearchQuery} />
               <div className="flex gap-2 overflow-x-auto pb-2">
                 <button onClick={() => { setSelectedCategory(null); setShowFavorites(false); setActiveList(null); setCategoriesCollapsed(true); collapseImportedLists() }}
                   className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${!selectedCategory && !showFavorites && !activeListId ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>Todos</button>

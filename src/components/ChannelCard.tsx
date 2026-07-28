@@ -18,9 +18,16 @@ export default function ChannelCard({ channel, listId, allCategories = [] }: Cha
   const changeChannelCategory = usePlayerStore((state) => state.changeChannelCategory)
   const moveChannelToList = usePlayerStore((state) => state.moveChannelToList)
   const importedLists = usePlayerStore((state) => state.importedLists)
+  const channelStatus = usePlayerStore((state) => state.channelStatus)
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const status = !channel.url ? 'offline' : (channelStatus[channel.id])
+  const statusColor = status === 'online' ? 'bg-green-500'
+    : status === 'offline' ? 'bg-red-500'
+    : status === 'checking' ? 'bg-yellow-500 animate-pulse'
+    : 'bg-gray-600'
 
   const isActive = currentChannel?.id === channel.id
   const favorite = isFavorite(channel.id)
@@ -77,6 +84,7 @@ export default function ChannelCard({ channel, listId, allCategories = [] }: Cha
           <img
             src={channel.logo?.trim() ? channel.logo : getFallbackLogo(channel.name)}
             alt={channel.name}
+            loading="lazy"
             className="w-12 h-12 rounded-lg object-cover"
             onError={(e) => {
               const target = e.currentTarget as HTMLImageElement
@@ -84,9 +92,9 @@ export default function ChannelCard({ channel, listId, allCategories = [] }: Cha
               target.src = getFallbackLogo(channel.name)
             }}
           />
-          {channel.isLive && (
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-          )}
+          <span className={`absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-gray-900 ${statusColor}`}
+            title={status === 'online' ? 'Señal activa' : status === 'offline' ? 'Sin señal' : status === 'checking' ? 'Verificando...' : ''}
+          />
         </div>
 
         {/* Info del canal */}

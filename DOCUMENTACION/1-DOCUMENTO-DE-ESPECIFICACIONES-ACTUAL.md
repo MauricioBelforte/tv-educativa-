@@ -4,12 +4,12 @@
 - **Frontend**: Next.js 14 (App Router) + TypeScript
 - **Estilos**: Tailwind CSS 3 (modo oscuro con clase 'dark')
 - **Reproductor**: HLS.js 1.x (con fallback Safari nativo + proxy CORS)
-- **Estado**: Zustand 4.x (persistencia en localStorage)
+- **Estado**: Zustand 4.x (persistencia en localStorage + channelStatus)
 - **API**: Next.js API Routes
 
 ## Arquitectura
 ```
-Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Proxy
+Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Proxy / Check-Stream
 ```
 
 ## Funcionalidades Implementadas
@@ -23,6 +23,16 @@ Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Pro
 8. Actualización automática y manual de listas M3U
 9. Carga de listas desde URL con persistencia
 10. EPG (Guía de Programación Electrónica) now/next
+11. Verificación de salud de canales (online/offline checking)
+14. Verificación deep (descarga de primer segmento HLS)
+13. Dos modos de escaneo: rápido (20 workers, deep) y lento (2 workers, sin deep)
+12. Estado de canales persistido en localStorage
+15. Filtro "Solo activos" con toggle
+16. Importación batch de listas (textarea multilinea)
+17. Reordenamiento drag & drop de listas
+18. Descripciones editables en listas importadas
+19. Categorías colapsadas por defecto
+20. Búsqueda integrada en Header
 
 ## API
 - `GET /api/channels` - Lista de canales
@@ -32,3 +42,4 @@ Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Pro
 - `GET /api/refresh-list?id=X&url=Y` - Refresco de listas M3U
 - `GET /api/epg?channel=X` - Datos de programación EPG
 - `GET /api/m3u-proxy?url=X` - Proxy de descarga de listas
+- `GET /api/check-stream?url=X&deep=true` - Verificación de salud del stream

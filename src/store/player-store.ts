@@ -3,6 +3,8 @@
 import { create } from 'zustand'
 import { Channel, ImportedList } from '@/lib/types'
 
+export type ChannelStatus = 'unknown' | 'checking' | 'online' | 'offline'
+
 interface PlayerStore {
   currentChannel: Channel | null
   isPlaying: boolean
@@ -10,8 +12,9 @@ interface PlayerStore {
   isDarkMode: boolean
   importedLists: ImportedList[]
   activeListId: string | null
-  activeSources: string[]    // IDs de fuentes activas para vista múltiple
+  activeSources: string[]
   isRefreshing: Record<string, boolean>
+  channelStatus: Record<string, ChannelStatus>
   
   setChannel: (channel: Channel) => void
   togglePlay: () => void
@@ -28,6 +31,7 @@ interface PlayerStore {
   removeChannelFromList: (listId: string, channelId: string) => void
   setActiveList: (listId: string | null) => void
   getListById: (listId: string) => ImportedList | undefined
+  reorderLists: (fromIndex: number, toIndex: number) => void
   
   // Mover canales entre listas y cambiar categoría
   moveChannelToList: (fromListId: string, channelId: string, toListId: string) => void
@@ -43,6 +47,13 @@ interface PlayerStore {
   // Fase 3: Refresco de listas
   refreshList: (listId: string) => Promise<void>
   refreshAllLists: () => Promise<void>
+  
+  // Verificación de estado de canales
+  checkChannelStatus: (channelId: string, url: string) => Promise<void>
+  setChannelStatus: (channelId: string, status: ChannelStatus) => void
+  checkAllChannels: (channels: { id: string; url: string }[]) => Promise<void>
+  recheckAllChannels: (channels: { id: string; url: string }[]) => Promise<void>
+  fastRecheckAllChannels: (channels: { id: string; url: string }[]) => Promise<void>
 }
 
 function generateId(): string {
@@ -76,6 +87,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   activeListId: null,
   activeSources: [],
   isRefreshing: {},
+  channelStatus: {},
   
   setChannel: (channel) => set({ currentChannel: channel, isPlaying: true }),
   
@@ -121,8 +133,17 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       if (isDarkMode) {
         document.documentElement.classList.add('dark')
       }
-      
-      set({ favorites, isDarkMode, importedLists, activeSources })
+
+      const channelStatus = loadFromStorage<Record<string, ChannelStatus>>('iptv-channel-status', {})
+
+      set({
+        favorites,
+        isDarkMode,
+        importedLists,
+        activeSources,
+        channelStatus,
+        activeListId: importedLists.length > 0 ? importedLists[0].id : null,
+      })
     }
   },
 
@@ -200,6 +221,15 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   getListById: (listId) => {
     return get().importedLists.find(list => list.id === listId)
+  },
+
+  reorderLists: (fromIndex, toIndex) => {
+    const state = get()
+    const updated = [...state.importedLists]
+    const [moved] = updated.splice(fromIndex, 1)
+    updated.splice(toIndex, 0, moved)
+    saveToStorage('iptv-imported-lists', updated)
+    set({ importedLists: updated })
   },
 
   // Mover canal de una lista a otra
@@ -320,5 +350,129 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     const state = get()
     const refreshable = state.importedLists.filter(l => l.sourceUrl)
     await Promise.all(refreshable.map(l => get().refreshList(l.id)))
+  },
+
+  setChannelStatus: (channelId, status) => {
+    const updated = { ...get().channelStatus, [channelId]: status }
+    saveToStorage('iptv-channel-status', updated)
+    set({ channelStatus: updated })
+  },
+
+  checkChannelStatus: async (channelId, url) => {
+    const state = get()
+    if (state.channelStatus[channelId] === 'checking') return
+    const checking = { ...state.channelStatus, [channelId]: 'checking' as ChannelStatus }
+    saveToStorage('iptv-channel-status', checking)
+    set({ channelStatus: checking })
+
+    try {
+      const res = await fetch(`/api/check-stream?url=${encodeURIComponent(url)}`)
+      const data = await res.json()
+      const result = { ...get().channelStatus, [channelId]: data.online ? 'online' as ChannelStatus : 'offline' as ChannelStatus }
+      saveToStorage('iptv-channel-status', result)
+      set({ channelStatus: result })
+    } catch {
+      const failed = { ...get().channelStatus, [channelId]: 'offline' as ChannelStatus }
+      saveToStorage('iptv-channel-status', failed)
+      set({ channelStatus: failed })
+    }
+  },
+
+  checkAllChannels: async (channels) => {
+    const unchecked = channels.filter(ch => ch.url && !get().channelStatus[ch.id])
+    if (unchecked.length === 0) return
+
+    const concurrency = 2
+    const queue = [...unchecked]
+
+    const save = (id: string, status: ChannelStatus) => {
+      const updated = { ...get().channelStatus, [id]: status }
+      saveToStorage('iptv-channel-status', updated)
+      set({ channelStatus: updated })
+    }
+
+    const worker = async () => {
+      while (queue.length > 0) {
+        const ch = queue.shift()!
+        const state = get()
+        if (state.channelStatus[ch.id] === 'checking') continue
+        save(ch.id, 'checking')
+
+        try {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 15000)
+          const res = await fetch(`/api/check-stream?url=${encodeURIComponent(ch.url)}`, {
+            signal: controller.signal
+          })
+          clearTimeout(timeout)
+          const data = await res.json()
+          save(ch.id, data.online ? 'online' : 'offline')
+        } catch {
+          save(ch.id, 'offline')
+        }
+      }
+    }
+
+    const workers = Array(concurrency).fill(null).map(() => worker())
+    await Promise.all(workers)
+  },
+
+  recheckAllChannels: async (channels) => {
+    const save = (id: string, status: ChannelStatus) => {
+      const updated = { ...get().channelStatus, [id]: status }
+      saveToStorage('iptv-channel-status', updated)
+      set({ channelStatus: updated })
+    }
+
+    const queue = channels.filter(ch => ch.url)
+    const concurrency = 2
+
+    const worker = async () => {
+      while (queue.length > 0) {
+        const ch = queue.shift()!
+        save(ch.id, 'checking')
+        try {
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 15000)
+          const res = await fetch(`/api/check-stream?url=${encodeURIComponent(ch.url)}`, {
+            signal: controller.signal
+          })
+          clearTimeout(timeout)
+          const data = await res.json()
+          save(ch.id, data.online ? 'online' : 'offline')
+        } catch {
+          save(ch.id, 'offline')
+        }
+      }
+    }
+
+    await Promise.all(Array(concurrency).fill(null).map(() => worker()))
+  },
+
+  fastRecheckAllChannels: async (channels) => {
+    const save = (id: string, status: ChannelStatus) => {
+      const updated = { ...get().channelStatus, [id]: status }
+      saveToStorage('iptv-channel-status', updated)
+      set({ channelStatus: updated })
+    }
+
+    const queue = channels.filter(ch => ch.url)
+    const concurrency = 20
+
+    const worker = async () => {
+      while (queue.length > 0) {
+        const ch = queue.shift()!
+        save(ch.id, 'checking')
+        try {
+          const res = await fetch(`/api/check-stream?deep=true&url=${encodeURIComponent(ch.url)}`)
+          const data = await res.json()
+          save(ch.id, data.online ? 'online' : 'offline')
+        } catch {
+          save(ch.id, 'offline')
+        }
+      }
+    }
+
+    await Promise.all(Array(concurrency).fill(null).map(() => worker()))
   },
 }))
