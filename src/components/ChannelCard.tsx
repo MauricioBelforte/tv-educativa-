@@ -19,8 +19,12 @@ export default function ChannelCard({ channel, listId, allCategories = [] }: Cha
   const moveChannelToList = usePlayerStore((state) => state.moveChannelToList)
   const importedLists = usePlayerStore((state) => state.importedLists)
   const channelStatus = usePlayerStore((state) => state.channelStatus)
+  const renameChannel = usePlayerStore((state) => state.renameChannel)
 
   const [menuOpen, setMenuOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editName, setEditName] = useState(channel.name)
+  const inputRef = useRef<HTMLInputElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   const status = !channel.url ? 'offline' : (channelStatus[channel.id])
@@ -55,6 +59,21 @@ export default function ChannelCard({ channel, listId, allCategories = [] }: Cha
     }
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [menuOpen])
+
+  // Auto-focus al renombrar
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.select()
+    }
+  }, [editing])
+
+  const saveRename = () => {
+    const trimmed = editName.trim()
+    if (trimmed && trimmed !== channel.name && listId) {
+      renameChannel(listId, channel.id, trimmed)
+    }
+    setEditing(false)
+  }
 
   // Obtener categorías únicas de esta lista + otras listas
   const categories = listId ? [...new Set(allCategories)] : []
@@ -99,7 +118,23 @@ export default function ChannelCard({ channel, listId, allCategories = [] }: Cha
 
         {/* Info del canal */}
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{channel.name}</p>
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              onBlur={saveRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveRename()
+                if (e.key === 'Escape') { setEditName(channel.name); setEditing(false) }
+                e.stopPropagation()
+              }}
+              className="w-full px-1 py-0.5 bg-gray-900 border border-blue-500 rounded text-sm text-white font-medium focus:outline-none"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <p className="font-medium text-sm truncate">{channel.name}</p>
+          )}
           <p className={`text-xs mt-0.5 ${isActive ? 'text-blue-200' : 'text-gray-400'}`}>
             {channel.category}
           </p>
@@ -145,10 +180,25 @@ export default function ChannelCard({ channel, listId, allCategories = [] }: Cha
               </svg>
             </button>
 
-            {/* Dropdown del menú */}
-            {menuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-48 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 py-1">
-                <p className="px-3 py-1.5 text-xs text-gray-500 uppercase tracking-wider">Cambiar categoría</p>
+                {/* Dropdown del menú */}
+                {menuOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-52 bg-gray-800 border border-gray-700 rounded-lg shadow-xl z-50 py-1">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditName(channel.name)
+                        setEditing(true)
+                        setMenuOpen(false)
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Renombrar
+                    </button>
+                    <div className="border-t border-gray-700 my-1" />
+                    <p className="px-3 py-1.5 text-xs text-gray-500 uppercase tracking-wider">Cambiar categoría</p>
                 {categories.filter(c => c !== channel.category).map((cat) => (
                   <button
                     key={cat}

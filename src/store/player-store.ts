@@ -45,6 +45,7 @@ interface PlayerStore {
   // Mover canales entre listas y cambiar categoría
   moveChannelToList: (fromListId: string, channelId: string, toListId: string) => void
   changeChannelCategory: (listId: string, channelId: string, newCategory: string) => void
+  renameChannel: (listId: string, channelId: string, newName: string) => void
   
   // Obtener canales favoritos de todas las listas
   getFavoriteChannels: () => Channel[]
@@ -373,6 +374,25 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     })
     saveToStorage('iptv-imported-lists', updatedLists)
     set({ importedLists: updatedLists })
+  },
+
+  renameChannel: (listId, channelId, newName) => {
+    const state = get()
+    const updatedLists = state.importedLists.map(list => {
+      if (list.id !== listId) return list
+      return {
+        ...list,
+        channels: list.channels.map(ch =>
+          ch.id === channelId ? { ...ch, name: newName } : ch
+        ),
+      }
+    })
+    saveToStorage('iptv-imported-lists', updatedLists)
+    set({ importedLists: updatedLists,
+      currentChannel: state.currentChannel?.id === channelId
+        ? { ...state.currentChannel, name: newName }
+        : state.currentChannel,
+    })
   },
 
   // Obtener canales favoritos de todas las listas
