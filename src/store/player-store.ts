@@ -278,8 +278,9 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   replacePrivateLists: (lists) => {
     const state = get()
+    const syncNames = new Set(lists.map(l => l.name))
 
-    const nonPrivate = state.importedLists.filter(l => !l.isPrivate)
+    const keep = state.importedLists.filter(l => !syncNames.has(l.name))
 
     const newLists: ImportedList[] = lists.map((list, i) => ({
       id: `synced-${Date.now()}-${i}`,
@@ -291,7 +292,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       isPrivate: true,
     }))
 
-    const updatedLists = [...nonPrivate, ...newLists]
+    const updatedLists = [...keep, ...newLists]
     saveToStorage('iptv-imported-lists', updatedLists)
     set({ importedLists: updatedLists, activeListId: newLists.length > 0 ? newLists[0].id : state.activeListId })
   },
