@@ -38,6 +38,7 @@ interface PlayerStore {
   setActiveList: (listId: string | null) => void
   getListById: (listId: string) => ImportedList | undefined
   reorderLists: (fromIndex: number, toIndex: number) => void
+  replacePrivateLists: (lists: { name: string; channels: Channel[] }[]) => void
   
   // Mover canales entre listas y cambiar categoría
   moveChannelToList: (fromListId: string, channelId: string, toListId: string) => void
@@ -272,6 +273,26 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     updated.splice(toIndex, 0, moved)
     saveToStorage('iptv-imported-lists', updated)
     set({ importedLists: updated })
+  },
+
+  replacePrivateLists: (lists) => {
+    const state = get()
+
+    const nonPrivate = state.importedLists.filter(l => !l.isPrivate)
+
+    const newLists: ImportedList[] = lists.map((list, i) => ({
+      id: `synced-${Date.now()}-${i}`,
+      name: list.name,
+      channels: list.channels,
+      createdAt: new Date().toISOString(),
+      sourceUrl: list.name,
+      lastRefreshed: new Date().toISOString(),
+      isPrivate: true,
+    }))
+
+    const updatedLists = [...nonPrivate, ...newLists]
+    saveToStorage('iptv-imported-lists', updatedLists)
+    set({ importedLists: updatedLists, activeListId: newLists.length > 0 ? newLists[0].id : state.activeListId })
   },
 
   // Mover canal de una lista a otra

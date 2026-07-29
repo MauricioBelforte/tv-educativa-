@@ -35,6 +35,7 @@ export default function Home() {
   const recheckAllChannels = usePlayerStore((state) => state.recheckAllChannels)
   const fastRecheckAllChannels = usePlayerStore((state) => state.fastRecheckAllChannels)
   const addImportedList = usePlayerStore((state) => state.addImportedList)
+  const replacePrivateLists = usePlayerStore((state) => state.replacePrivateLists)
   const setActiveList = usePlayerStore((state) => state.setActiveList)
   const isAuthenticated = usePlayerStore((state) => state.isAuthenticated)
   const authPassword = usePlayerStore((state) => state.authPassword)
@@ -115,15 +116,11 @@ export default function Home() {
           const syncRes = await fetch(`/api/sync-lists?password=${encodeURIComponent(authPassword)}`)
           if (syncRes.ok) {
             const syncData: { lists: { name: string; channels: Channel[] }[]; favorites: string[] } = await syncRes.json()
-            for (const sl of syncData.lists) {
-              if (!nameExists(sl.name) && sl.channels.length > 0) {
-                addImportedList(sl.channels, sl.name, true)
-              }
+            if (syncData.lists?.length > 0) {
+              replacePrivateLists(syncData.lists)
             }
             if (syncData.favorites?.length > 0) {
-              const currentFavs = usePlayerStore.getState().favorites
-              const merged = [...new Set([...currentFavs, ...syncData.favorites])]
-              usePlayerStore.getState().setFavorites(merged)
+              usePlayerStore.getState().setFavorites(syncData.favorites)
             }
           }
         } catch {
