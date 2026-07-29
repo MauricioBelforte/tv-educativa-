@@ -5,6 +5,7 @@ export interface Channel {
   url: string
   category: string
   isLive: boolean
+  playerType?: 'hls' | 'iframe'
 }
 
 export interface ChannelsResponse {

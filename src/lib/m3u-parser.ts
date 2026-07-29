@@ -61,6 +61,7 @@ function parseChannel(extInf: string, url: string): Channel | null {
       url: url.trim(),
       category,
       isLive: true,
+      playerType: url.includes('.m3u8') ? 'hls' : 'iframe',
     }
   } catch {
     return null

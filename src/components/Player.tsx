@@ -116,43 +116,55 @@ export default function Player() {
     )
   }
 
+  const isIframe = currentChannel.playerType === 'iframe'
+
   return (
     <div className="relative bg-black rounded-lg overflow-hidden group">
-      <video
-        ref={videoRef}
-        className="w-full aspect-video"
-        controls
-        playsInline
-        onClick={togglePlay}
-      />
-      
-      {/* Overlay de carga */}
-      {isLoading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-          <div className="text-center">
-            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-white text-sm">Cargando stream...</p>
-          </div>
-        </div>
-      )}
-      
-      {/* Overlay de error */}
-      {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-          <div className="text-center px-4">
-            <svg className="w-12 h-12 mx-auto mb-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-            </svg>
-            <p className="text-white text-sm mb-2">{error}</p>
-            <p className="text-gray-400 text-xs">
-              {currentChannel.name} - {currentChannel.category}
-            </p>
-          </div>
-        </div>
+      {isIframe ? (
+        <iframe
+          src={currentChannel.url}
+          className="w-full aspect-video"
+          allow="autoplay; encrypted-media; fullscreen"
+          allowFullScreen
+          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+        />
+      ) : (
+        <>
+          <video
+            ref={videoRef}
+            className="w-full aspect-video"
+            controls
+            playsInline
+            onClick={togglePlay}
+          />
+          {/* Overlay de carga */}
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+              <div className="text-center">
+                <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                <p className="text-white text-sm">Cargando stream...</p>
+              </div>
+            </div>
+          )}
+          {/* Overlay de error */}
+          {error && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+              <div className="text-center px-4">
+                <svg className="w-12 h-12 mx-auto mb-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <p className="text-white text-sm mb-2">{error}</p>
+                <p className="text-gray-400 text-xs">
+                  {currentChannel.name} - {currentChannel.category}
+                </p>
+              </div>
+            </div>
+          )}
+        </>
       )}
       
       {/* Info del canal */}
-      <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         <div className="flex items-center gap-2">
           {currentChannel.logo && (
             <img
