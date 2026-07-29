@@ -111,13 +111,19 @@ export default function Home() {
         try {
           const syncRes = await fetch(`/api/sync-lists?password=${encodeURIComponent(authPassword)}`)
           if (syncRes.ok) {
-            const syncedLists: { name: string; channels: Channel[] }[] = await syncRes.json()
+            const syncData: { lists: { name: string; channels: Channel[] }[]; favorites: string[] } = await syncRes.json()
             const existing = usePlayerStore.getState().importedLists
-            for (const sl of syncedLists) {
+            for (const sl of syncData.lists) {
               const exists = existing.some(l => l.isPrivate && l.name === sl.name)
               if (!exists && sl.channels.length > 0) {
                 addImportedList(sl.channels, sl.name, true)
               }
+            }
+            // Sincronizar favoritos
+            if (syncData.favorites?.length > 0) {
+              const currentFavs = usePlayerStore.getState().favorites
+              const merged = [...new Set([...currentFavs, ...syncData.favorites])]
+              usePlayerStore.getState().setFavorites(merged)
             }
           }
         } catch (error) {
@@ -312,14 +318,17 @@ export default function Home() {
                           setSyncStatus('Subiendo...')
                           try {
                             const state = usePlayerStore.getState()
-                            const payload = state.importedLists.map(l => ({
-                              name: l.name,
-                              channels: l.channels,
-                            }))
+                            const payload = {
+                              lists: state.importedLists.map(l => ({
+                                name: l.name,
+                                channels: l.channels,
+                              })),
+                              favorites: state.favorites,
+                            }
                             const res = await fetch(`/api/sync-lists?password=${encodeURIComponent(state.authPassword)}`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ lists: payload }),
+                              body: JSON.stringify(payload),
                             })
                             if (res.ok) setSyncStatus('Sincronizado')
                             else setSyncStatus('Error al subir')

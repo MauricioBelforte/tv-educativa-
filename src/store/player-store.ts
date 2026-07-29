@@ -21,6 +21,7 @@ interface PlayerStore {
   setChannel: (channel: Channel) => void
   togglePlay: () => void
   toggleFavorite: (channelId: string) => void
+  setFavorites: (ids: string[]) => void
   isFavorite: (channelId: string) => boolean
   toggleDarkMode: () => void
   initFromStorage: () => void
@@ -109,6 +110,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ favorites: newFavorites })
   },
   
+  setFavorites: (ids) => {
+    saveToStorage('iptv-favorites', ids)
+    set({ favorites: ids })
+  },
+
   isFavorite: (channelId) => {
     return get().favorites.includes(channelId)
   },
