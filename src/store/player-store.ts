@@ -17,6 +17,7 @@ interface PlayerStore {
   channelStatus: Record<string, ChannelStatus>
   isAuthenticated: boolean
   authPassword: string
+  _initialized: boolean
   
   setChannel: (channel: Channel) => void
   togglePlay: () => void
@@ -95,6 +96,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   channelStatus: {},
   isAuthenticated: false,
   authPassword: '',
+  _initialized: false,
   
   setChannel: (channel) => set({ currentChannel: channel, isPlaying: true }),
   
@@ -158,6 +160,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
         activeListId: importedLists.length > 0 ? importedLists[0].id : null,
         authPassword,
         isAuthenticated: !!authPassword,
+        _initialized: true,
       })
     }
   },

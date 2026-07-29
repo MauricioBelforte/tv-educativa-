@@ -38,6 +38,7 @@ export default function Home() {
   const setActiveList = usePlayerStore((state) => state.setActiveList)
   const isAuthenticated = usePlayerStore((state) => state.isAuthenticated)
   const authPassword = usePlayerStore((state) => state.authPassword)
+  const _initialized = usePlayerStore((state) => state._initialized)
   const login = usePlayerStore((state) => state.login)
   const logout = usePlayerStore((state) => state.logout)
   const [showLogin, setShowLogin] = useState(false)
@@ -79,6 +80,7 @@ export default function Home() {
   }, [channels, importedLists, activeSources])
 
   useEffect(() => {
+    if (!_initialized) return
     async function loadChannels() {
       const fallbackChannels = (channelsData.channels as Channel[]) || []
 
@@ -132,7 +134,7 @@ export default function Home() {
       setIsLoading(false)
     }
     loadChannels()
-  }, [isAuthenticated, authPassword])
+  }, [isAuthenticated, authPassword, _initialized])
 
   useEffect(() => {
     if (isLoading) return
