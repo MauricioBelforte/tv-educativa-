@@ -73,6 +73,7 @@ src/
 | `GET /api/private-lists` | Listas privadas desde env vars (Vercel) | (ninguno, usa variables de entorno) |
 | `GET /api/sync-lists` | Descargar listas sincronizadas desde Supabase | (ninguno) |
 | `POST /api/sync-lists` | Subir listas a Supabase | Body: `{ lists: [...] }` |
+| `GET /api/check-password?p=XXX` | Validar contrasena de acceso | `p`: contrasena a verificar |
 
 ## Store (Zustand) - Acciones Principales
 
@@ -178,6 +179,13 @@ PRIVATE_LIST_1_AUTH=usuario:contrasenia
 - URLs, credenciales y contenido nunca salen del servidor
 - Se cargan automaticamente al iniciar la app via `/api/private-lists`
 - Cada lista aparece como una lista importada en el gestor
+
+## Autenticacion (Login)
+
+- **APP_PASSWORD** en `.env.local` / Vercel: contrasena para acceder a listas privadas
+- Sin autenticacion: solo canales por defecto (channels.json)
+- Con autenticacion: listas importadas, privadas, sincronizadas, verificacion de senal
+- El estado se persiste en localStorage, no se pide la contrasena en cada recarga
 
 ## Carpetas Locales (No se suben a GitHub)
 - `local/` -> Archivos .m3u para carga automatica

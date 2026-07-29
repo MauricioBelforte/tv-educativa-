@@ -59,9 +59,16 @@
 - `GET /api/check-stream` → Verificación de salud (8s timeout, 12s si deep)
   - `deep=false` (default): valida que el .m3u8 responda y contenga #EXTM3U
   - `deep=true`: además parsea y descarga el primer segmento
-- `GET /api/private-lists` → Listas desde env vars (base64/URL/auth)
-- `GET /api/sync-lists` → Descargar listas desde Supabase
-- `POST /api/sync-lists` → Subir listas a Supabase
+- `GET /api/private-lists` → Listas desde env vars (protegida con password)
+- `GET /api/sync-lists` → Descargar listas desde Supabase (protegida con password)
+- `POST /api/sync-lists` → Subir listas a Supabase (protegida con password)
+- `GET /api/check-password?p=XXX` → Validar contraseña
+
+## Autenticación
+- Login modal (LoginModal.tsx) validado server-side
+- Estado persistido en localStorage
+- APIs protegidas: sin password correcto devuelven array vacío
+- Solo canales por defecto visibles sin autenticar
 
 ## Infraestructura Adicional
 - **Supabase**: PostgreSQL gratis para sincronización entre local y producción

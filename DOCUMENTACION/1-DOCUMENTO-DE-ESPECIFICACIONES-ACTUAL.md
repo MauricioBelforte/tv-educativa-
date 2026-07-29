@@ -4,8 +4,9 @@
 - **Frontend**: Next.js 14 (App Router) + TypeScript
 - **Estilos**: Tailwind CSS 3 (modo oscuro con clase 'dark')
 - **Reproductor**: HLS.js 1.x (con fallback Safari nativo + proxy CORS)
-- **Estado**: Zustand 4.x (persistencia en localStorage + channelStatus)
+- **Estado**: Zustand 4.x (persistencia en localStorage + channelStatus + auth)
 - **API**: Next.js API Routes
+- **Base de datos**: Supabase (PostgreSQL gratis) para sincronizacion
 
 ## Arquitectura
 ```
@@ -35,6 +36,7 @@ Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Pro
 20. Búsqueda integrada en Header
 21. Listas privadas desde variables de entorno (Vercel), soporta contenido base64, URL, o URL con Basic Auth. Nunca se exponen al cliente.
 22. Sincronizacion automatica entre local y Vercel via Supabase (PostgreSQL gratis). Boton "Subir listas a la nube" y carga automatica al iniciar.
+23. Login con contrasena para proteger listas privadas. Usuarios no autenticados ven solo canales por defecto.
 
 ## API
 - `GET /api/channels` - Lista de canales
@@ -48,3 +50,4 @@ Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Pro
 - `GET /api/private-lists` - Listas privadas desde variables de entorno (Vercel)
 - `GET /api/sync-lists` - Descargar listas sincronizadas desde Supabase
 - `POST /api/sync-lists` - Subir listas a Supabase
+- `GET /api/check-password?p=XXX` - Validar contrasena de acceso
