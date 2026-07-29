@@ -64,23 +64,31 @@ export async function GET(request: NextRequest) {
     const isM3u8 = targetUrl.endsWith('.m3u8') || contentType.includes('mpegurl') || contentType.includes('x-mpegurl')
     const arrayBuffer = await response.arrayBuffer()
 
-    // La base para reescribir las URLs del playlist: nuestro propio servidor
-    const reqUrl = new URL(request.url)
-    const proxyBase = `${reqUrl.protocol}//${reqUrl.host}`
-
+    // Si no se detectó como m3u8 por URL o content-type, probar con el contenido
     let body: string | ArrayBuffer
-    if (isM3u8) {
-      const playlist = new TextDecoder().decode(arrayBuffer)
-      body = rewritePlaylist(playlist, targetUrl, proxyBase)
+    if (!isM3u8) {
+      const text = new TextDecoder().decode(arrayBuffer.slice(0, 50))
+      if (text.trim().startsWith('#EXTM3U')) {
+        const fullText = new TextDecoder().decode(arrayBuffer)
+        body = fullText
+      } else {
+        body = arrayBuffer
+      }
     } else {
-      body = arrayBuffer
+      body = new TextDecoder().decode(arrayBuffer)
+    }
+
+    if (typeof body === 'string') {
+      const reqUrl = new URL(request.url)
+      const proxyBase = `${reqUrl.protocol}//${reqUrl.host}`
+      body = rewritePlaylist(body, targetUrl, proxyBase)
     }
 
     return new NextResponse(body, {
       status: 200,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Content-Type': isM3u8 ? 'application/vnd.apple.mpegurl' : contentType,
+        'Content-Type': isM3u8 || (typeof body === 'string') ? 'application/vnd.apple.mpegurl' : contentType,
         'Cache-Control': 'no-cache',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': '*',
