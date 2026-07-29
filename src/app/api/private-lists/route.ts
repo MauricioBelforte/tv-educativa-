@@ -1,18 +1,12 @@
+import { NextRequest } from 'next/server'
 import { parseM3U } from '@/lib/m3u-parser'
 
-/**
- * API Route: GET /api/private-lists
- *
- * Sirve listas privadas desde variables de entorno.
- * Las URLs y contenido nunca se exponen al navegador.
- *
- * Por cada indice N (1, 2, 3...) se necesita:
- *   - Opcion A (URL): PRIVATE_LIST_N_URL + opcional PRIVATE_LIST_N_AUTH
- *   - Opcion B (directo): PRIVATE_LIST_N_CONTENT (base64 del .m3u)
- *
- * Siempre opcional: PRIVATE_LIST_N_NAME
- */
-export async function GET() {
+const APP_PASSWORD = process.env.APP_PASSWORD || ''
+
+export async function GET(request: NextRequest) {
+  const pwd = request.nextUrl.searchParams.get('password')
+  if (pwd !== APP_PASSWORD) return Response.json([])
+
   const lists: { name: string; channels: ReturnType<typeof parseM3U> }[] = []
   let i = 1
 
@@ -20,7 +14,6 @@ export async function GET() {
     const name = process.env[`PRIVATE_LIST_${i}_NAME`] || `Lista Privada ${i}`
     let content: string | null = null
 
-    // Opcion A: descargar desde URL (con auth opcional)
     const url = process.env[`PRIVATE_LIST_${i}_URL`]
     if (url) {
       const auth = process.env[`PRIVATE_LIST_${i}_AUTH`]
@@ -40,7 +33,6 @@ export async function GET() {
       }
     }
 
-    // Opcion B: contenido en base64 directamente
     if (!content) {
       const b64 = process.env[`PRIVATE_LIST_${i}_CONTENT`]
       if (b64) {

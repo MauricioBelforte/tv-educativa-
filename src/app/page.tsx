@@ -11,7 +11,7 @@ import ChannelList from '@/components/ChannelList'
 import M3UImporter from '@/components/M3UImporter'
 import ImportedListsManager from '@/components/ImportedListsManager'
 import EPGPanel from '@/components/EPGPanel'
-
+import LoginModal from '@/components/LoginModal'
 
 export default function Home() {
   const [channels, setChannels] = useState<Channel[]>([])
@@ -21,9 +21,10 @@ export default function Home() {
   const [showFavorites, setShowFavorites] = useState(false)
   const [importedListsCollapseKey, setImportedListsCollapseKey] = useState(0)
   const [categoriesCollapsed, setCategoriesCollapsed] = useState(true)
-
   const [channelListOpen, setChannelListOpen] = useState(true)
   const [showOnlineOnly, setShowOnlineOnly] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState('')
 
   const importedLists = usePlayerStore((state) => state.importedLists)
   const activeListId = usePlayerStore((state) => state.activeListId)
@@ -35,15 +36,16 @@ export default function Home() {
   const fastRecheckAllChannels = usePlayerStore((state) => state.fastRecheckAllChannels)
   const addImportedList = usePlayerStore((state) => state.addImportedList)
   const setActiveList = usePlayerStore((state) => state.setActiveList)
-  const [syncing, setSyncing] = useState(false)
-  const [syncStatus, setSyncStatus] = useState('')
+  const isAuthenticated = usePlayerStore((state) => state.isAuthenticated)
+  const authPassword = usePlayerStore((state) => state.authPassword)
+  const login = usePlayerStore((state) => state.login)
+  const logout = usePlayerStore((state) => state.logout)
+  const [showLogin, setShowLogin] = useState(false)
 
-  // Al deployar una lista, abrir la sidebar de canales
   useEffect(() => {
     if (activeListId) setChannelListOpen(true)
   }, [activeListId])
 
-  // Obtener canales activos: los de la lista seleccionada, o los por defecto si está vacía
   const activeChannels = useMemo(() => {
     if (activeListId) {
       const list = importedLists.find(l => l.id === activeListId)
@@ -53,7 +55,6 @@ export default function Home() {
     return channels
   }, [activeListId, importedLists, channels])
 
-  // Canales favoritos de todas las listas (incluye canales por defecto)
   const favoriteChannels = useMemo(() => {
     const all: Channel[] = []
     const addIfFavorite = (ch: Channel) => {
@@ -64,10 +65,8 @@ export default function Home() {
     return all
   }, [favorites, channels, importedLists])
 
-  // Consolidar canales por defecto y de las listas activas
   const allAvailableChannels = useMemo(() => {
     const mergedChannels: Channel[] = [...channels]
-
     importedLists.forEach((list) => {
       if (!activeSources.includes(list.id)) return
       list.channels.forEach((channel) => {
@@ -76,11 +75,9 @@ export default function Home() {
         }
       })
     })
-
     return mergedChannels
   }, [channels, importedLists, activeSources])
 
-  // Cargar canales desde la API
   useEffect(() => {
     async function loadChannels() {
       const fallbackChannels = (channelsData.channels as Channel[]) || []
@@ -90,51 +87,49 @@ export default function Home() {
         if (!res.ok) throw new Error('API error')
         const data = await res.json()
         setChannels(Array.isArray(data.channels) ? data.channels : fallbackChannels)
-      } catch (error) {
-        console.error('Error loading channels:', error)
+      } catch {
         setChannels(fallbackChannels)
       }
 
-      // Cargar listas privadas desde variables de entorno (Vercel)
-      try {
-        const privRes = await fetch('/api/private-lists')
-        if (privRes.ok) {
-          const privateLists: { name: string; channels: Channel[] }[] = await privRes.json()
-          const existing = usePlayerStore.getState().importedLists
-          for (const pl of privateLists) {
-            const exists = existing.some(l => l.isPrivate && l.name === pl.name)
-            if (!exists && pl.channels.length > 0) {
-              addImportedList(pl.channels, pl.name, true)
+      if (isAuthenticated && authPassword) {
+        try {
+          const privRes = await fetch(`/api/private-lists?password=${encodeURIComponent(authPassword)}`)
+          if (privRes.ok) {
+            const privateLists: { name: string; channels: Channel[] }[] = await privRes.json()
+            const existing = usePlayerStore.getState().importedLists
+            for (const pl of privateLists) {
+              const exists = existing.some(l => l.isPrivate && l.name === pl.name)
+              if (!exists && pl.channels.length > 0) {
+                addImportedList(pl.channels, pl.name, true)
+              }
             }
           }
+        } catch (error) {
+          console.error('Error loading private lists:', error)
         }
-      } catch (error) {
-        console.error('Error loading private lists:', error)
-      }
 
-      // Cargar listas sincronizadas desde Supabase
-      try {
-        const syncRes = await fetch('/api/sync-lists')
-        if (syncRes.ok) {
-          const syncedLists: { name: string; channels: Channel[] }[] = await syncRes.json()
-          const existing = usePlayerStore.getState().importedLists
-          for (const sl of syncedLists) {
-            const exists = existing.some(l => l.isPrivate && l.name === sl.name)
-            if (!exists && sl.channels.length > 0) {
-              addImportedList(sl.channels, sl.name, true)
+        try {
+          const syncRes = await fetch(`/api/sync-lists?password=${encodeURIComponent(authPassword)}`)
+          if (syncRes.ok) {
+            const syncedLists: { name: string; channels: Channel[] }[] = await syncRes.json()
+            const existing = usePlayerStore.getState().importedLists
+            for (const sl of syncedLists) {
+              const exists = existing.some(l => l.isPrivate && l.name === sl.name)
+              if (!exists && sl.channels.length > 0) {
+                addImportedList(sl.channels, sl.name, true)
+              }
             }
           }
+        } catch (error) {
+          console.error('Error loading synced lists:', error)
         }
-      } catch (error) {
-        console.error('Error loading synced lists:', error)
       }
 
       setIsLoading(false)
     }
     loadChannels()
-  }, [])
+  }, [isAuthenticated, authPassword])
 
-  // Verificar estado de canales en lotes de 5 (solo listas con checkbox)
   useEffect(() => {
     if (isLoading) return
     const pending = allAvailableChannels.filter(c => c.url && !channelStatus[c.id])
@@ -142,7 +137,6 @@ export default function Home() {
     checkAllChannels(pending.map(c => ({ id: c.id, url: c.url! })))
   }, [allAvailableChannels, isLoading, checkAllChannels])
 
-  // Manejar importación de lista M3U
   const handleM3UImport = (m3uContent: string, sourceUrl?: string) => {
     const importedChannels = parseM3U(m3uContent)
     if (importedChannels.length > 0) {
@@ -154,9 +148,8 @@ export default function Home() {
     setImportedListsCollapseKey((value) => value + 1)
   }
 
-  // Obtener nombre de la fuente actual
   const currentSourceName = useMemo(() => {
-    if (showFavorites) return '⭐ Favoritos'
+    if (showFavorites) return 'Favoritos'
     if (selectedCategory) return selectedCategory
     if (searchQuery) return 'Resultados de todas las listas'
     if (activeListId) {
@@ -166,42 +159,31 @@ export default function Home() {
     return 'Canales por Defecto'
   }, [activeListId, importedLists, showFavorites, selectedCategory, searchQuery])
 
-  // Determinar qué canales mostrar según el estado
   const displayChannels = useMemo(() => {
     if (showFavorites) return favoriteChannels
-
     const isFilteringGlobally = Boolean(searchQuery) || Boolean(selectedCategory)
-    if (isFilteringGlobally) {
-      return allAvailableChannels
-    }
-
+    if (isFilteringGlobally) return allAvailableChannels
     return activeChannels
   }, [showFavorites, favoriteChannels, activeChannels, allAvailableChannels, searchQuery, selectedCategory])
 
-  // Filtrar canales en memoria
   const filteredChannels = useMemo(() => {
     let result = [...displayChannels]
-
     if (selectedCategory && !showFavorites) {
       result = result.filter(c => c.category === selectedCategory)
     }
-
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       result = result.filter(c => c.name.toLowerCase().includes(query))
     }
-
     if (showOnlineOnly) {
       result = result.filter(c => {
         const s = channelStatus[c.id]
         return s === 'online' || s === 'checking' || s === undefined
       })
     }
-
     return result
   }, [displayChannels, selectedCategory, searchQuery, showFavorites, showOnlineOnly, channelStatus])
 
-  // Extraer categorías de los canales disponibles para filtrar
   const activeCategories = useMemo(() => {
     const sourceChannels = showFavorites ? favoriteChannels : allAvailableChannels
     return [...new Set(sourceChannels.map(c => c.category))].sort()
@@ -209,11 +191,14 @@ export default function Home() {
 
   return (
     <div className="h-screen bg-gradient-to-b from-slate-900 to-slate-950 text-white flex flex-col">
+      {showLogin && <LoginModal onLogin={async (pwd) => {
+        const ok = await login(pwd)
+        if (ok) setShowLogin(false)
+        return ok
+      }} />}
       <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <main className="flex-1 w-full min-h-0 flex">
-        {/* Área lateral izquierda: barra superior + listas */}
         <div className="h-full w-80 flex-shrink-0 border-r border-gray-800 flex flex-col">
-          {/* Barra superior tipo solapas */}
           <div className="h-12 flex-shrink-0 bg-slate-900 border-b border-gray-800 flex items-center px-3 gap-1">
             <button
               onClick={() => setChannelListOpen(!channelListOpen)}
@@ -233,7 +218,7 @@ export default function Home() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
               </svg>
             </button>
-            <button
+            {isAuthenticated && <button
               onClick={() => {
                 const all: { id: string; url: string }[] = []
                 const seen = new Set<string>()
@@ -243,23 +228,30 @@ export default function Home() {
                 fastRecheckAllChannels(all)
               }}
               className="p-2 rounded-lg text-gray-500 hover:text-blue-400 transition-colors"
-              title="Escanear todos los canales (rápido)"
+              title="Escanear todos los canales (rapido)"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-            </button>
+            </button>}
             <div className="flex-1" />
+            {isAuthenticated ? (
+              <button onClick={logout} className="text-xs text-gray-500 hover:text-red-400 transition-colors px-2 py-1 rounded">
+                Salir
+              </button>
+            ) : (
+              <button onClick={() => setShowLogin(true)} className="text-xs text-blue-400 hover:text-blue-300 transition-colors px-2 py-1 rounded">
+                Acceso Privado
+              </button>
+            )}
           </div>
 
-          {/* Contenido de listas + overlay de canales */}
           <div className="flex-1 min-h-0 relative overflow-hidden bg-slate-900">
             {channelListOpen && (
               <div className="absolute inset-0 z-30 bg-slate-900 overflow-y-auto">
                 <div className="p-4 space-y-4">
                   {!searchQuery && (
                     <div className="bg-gray-900/70 rounded-xl p-4 border border-gray-800 shadow-lg space-y-2">
-
                       <button onClick={() => { setShowOnlineOnly(!showOnlineOnly); setSelectedCategory(null); setShowFavorites(false) }}
                         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${showOnlineOnly ? 'bg-green-600 text-white' : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'}`}>
                         <div className="flex items-center gap-2">
@@ -271,7 +263,7 @@ export default function Home() {
                         <><div className="border-t border-gray-700 my-2" />
                           <button onClick={() => setCategoriesCollapsed((v) => !v)}
                             className="w-full flex items-center justify-between px-3 mb-1 text-xs text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors">
-                            <span>Categorías</span>
+                            <span>Categorias</span>
                             <svg className={`w-3 h-3 transition-transform ${categoriesCollapsed ? '-rotate-90' : 'rotate-0'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
                             </svg>
@@ -289,7 +281,7 @@ export default function Home() {
                       <h2 className="text-lg font-semibold text-white">{currentSourceName}</h2>
                       <div className="flex items-center gap-2">
                         <span className="text-sm text-gray-500">{filteredChannels.length} canales</span>
-                        <button
+                        {isAuthenticated && <button
                           onClick={() => recheckAllChannels(allAvailableChannels.map(c => ({ id: c.id, url: c.url })))}
                           className="p-1 rounded-lg text-gray-500 hover:text-blue-400 transition-colors"
                           title="Escaneo lento sin bloqueo"
@@ -297,7 +289,7 @@ export default function Home() {
                           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                           </svg>
-                        </button>
+                        </button>}
                       </div>
                     </div>
                     <ChannelList channels={filteredChannels} isLoading={isLoading && !activeListId} />
@@ -308,48 +300,63 @@ export default function Home() {
             <div className="h-full overflow-y-auto">
               <div className="p-4 space-y-4">
                 <h2 className="text-lg font-semibold text-white">Listas</h2>
-                <M3UImporter onImport={handleM3UImport} />
-                <div className="border-t border-gray-700" />
-                <ImportedListsManager collapseTrigger={importedListsCollapseKey} />
-                <div className="pt-3">
-                  <button
-                    onClick={async () => {
-                      setSyncing(true)
-                      setSyncStatus('Subiendo...')
-                      try {
-                        const state = usePlayerStore.getState()
-                        const payload = state.importedLists.map(l => ({
-                          name: l.name,
-                          channels: l.channels,
-                        }))
-                        const res = await fetch('/api/sync-lists', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ lists: payload }),
-                        })
-                        if (res.ok) setSyncStatus('Sincronizado')
-                        else setSyncStatus('Error al subir')
-                      } catch {
-                        setSyncStatus('Error de conexion')
-                      }
-                      setSyncing(false)
-                      setTimeout(() => setSyncStatus(''), 3000)
-                    }}
-                    disabled={syncing}
-                    className="w-full px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm transition-colors flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    {syncing ? 'Subiendo...' : syncStatus || 'Subir listas a la nube'}
-                  </button>
-                </div>
+                {isAuthenticated ? (
+                  <>
+                    <M3UImporter onImport={handleM3UImport} />
+                    <div className="border-t border-gray-700" />
+                    <ImportedListsManager collapseTrigger={importedListsCollapseKey} />
+                    <div className="pt-3">
+                      <button
+                        onClick={async () => {
+                          setSyncing(true)
+                          setSyncStatus('Subiendo...')
+                          try {
+                            const state = usePlayerStore.getState()
+                            const payload = state.importedLists.map(l => ({
+                              name: l.name,
+                              channels: l.channels,
+                            }))
+                            const res = await fetch(`/api/sync-lists?password=${encodeURIComponent(state.authPassword)}`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ lists: payload }),
+                            })
+                            if (res.ok) setSyncStatus('Sincronizado')
+                            else setSyncStatus('Error al subir')
+                          } catch {
+                            setSyncStatus('Error de conexion')
+                          }
+                          setSyncing(false)
+                          setTimeout(() => setSyncStatus(''), 3000)
+                        }}
+                        disabled={syncing}
+                        className="w-full px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white text-sm transition-colors flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        {syncing ? 'Subiendo...' : syncStatus || 'Subir listas a la nube'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-gray-900/70 rounded-xl p-6 border border-gray-800">
+                    <p className="text-gray-400 text-sm text-center">
+                      Inicia sesion para importar y sincronizar tus listas
+                    </p>
+                    <button
+                      onClick={() => setShowLogin(true)}
+                      className="mt-3 w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm transition-colors"
+                    >
+                      Iniciar sesion
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Contenido principal */}
         <div className="flex-1 min-h-0 overflow-y-auto"
           onClick={() => { if (channelListOpen) setChannelListOpen(false) }}
         >
@@ -364,7 +371,7 @@ export default function Home() {
                 <button onClick={() => { setSelectedCategory(null); setShowFavorites(false); setActiveList(null); setCategoriesCollapsed(true); collapseImportedLists() }}
                   className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${!selectedCategory && !showFavorites && !activeListId ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>Todos</button>
                 <button onClick={() => { setShowFavorites(!showFavorites); collapseImportedLists() }}
-                  className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${showFavorites ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>⭐ Favoritos</button>
+                  className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${showFavorites ? 'bg-yellow-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>Favoritos</button>
                 {activeCategories.map((cat) => (
                   <button key={cat} onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
                     className={`px-3 py-1.5 rounded-lg text-sm whitespace-nowrap transition-colors ${selectedCategory === cat ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:text-gray-200'}`}>{cat}</button>

@@ -1,12 +1,17 @@
 import { NextRequest } from 'next/server'
 import { supabaseGet, supabaseUpsert } from '@/lib/supabase'
 
-export async function GET() {
+const APP_PASSWORD = process.env.APP_PASSWORD || ''
+
+function isAuthorized(request: NextRequest) {
+  return request.nextUrl.searchParams.get('password') === APP_PASSWORD
+}
+
+export async function GET(request: NextRequest) {
+  if (!isAuthorized(request)) return Response.json([])
   try {
     const data = await supabaseGet()
-    if (data === null) {
-      return Response.json({ error: 'Supabase no configurado' }, { status: 500 })
-    }
+    if (data === null) return Response.json([])
     return Response.json(data)
   } catch (error) {
     console.error('[sync-lists] Error GET:', error)
@@ -15,6 +20,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (!isAuthorized(request)) return Response.json({ error: 'No autorizado' }, { status: 401 })
   let body: { lists: unknown[] }
   try {
     body = await request.json()

@@ -15,6 +15,8 @@ interface PlayerStore {
   activeSources: string[]
   isRefreshing: Record<string, boolean>
   channelStatus: Record<string, ChannelStatus>
+  isAuthenticated: boolean
+  authPassword: string
   
   setChannel: (channel: Channel) => void
   togglePlay: () => void
@@ -22,6 +24,8 @@ interface PlayerStore {
   isFavorite: (channelId: string) => boolean
   toggleDarkMode: () => void
   initFromStorage: () => void
+  login: (password: string) => Promise<boolean>
+  logout: () => void
   
   // Gestión de listas importadas
   addImportedList: (channels: Channel[], sourceUrl?: string, isPrivate?: boolean) => string
@@ -88,6 +92,8 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   activeSources: [],
   isRefreshing: {},
   channelStatus: {},
+  isAuthenticated: false,
+  authPassword: '',
   
   setChannel: (channel) => set({ currentChannel: channel, isPlaying: true }),
   
@@ -129,6 +135,7 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       const isDarkMode = loadFromStorage<boolean>('iptv-dark-mode', false)
       const importedLists = loadFromStorage<ImportedList[]>('iptv-imported-lists', [])
       const activeSources = loadFromStorage<string[]>('iptv-active-sources', [])
+      const authPassword = loadFromStorage<string>('iptv-auth-password', '')
       
       if (isDarkMode) {
         document.documentElement.classList.add('dark')
@@ -143,8 +150,30 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
         activeSources,
         channelStatus,
         activeListId: importedLists.length > 0 ? importedLists[0].id : null,
+        authPassword,
+        isAuthenticated: !!authPassword,
       })
     }
+  },
+
+  login: async (password) => {
+    try {
+      const res = await fetch(`/api/check-password?p=${encodeURIComponent(password)}`)
+      const data = await res.json()
+      if (data.ok) {
+        saveToStorage('iptv-auth-password', password)
+        set({ isAuthenticated: true, authPassword: password })
+        return true
+      }
+      return false
+    } catch {
+      return false
+    }
+  },
+
+  logout: () => {
+    saveToStorage('iptv-auth-password', '')
+    set({ isAuthenticated: false, authPassword: '', importedLists: [], activeListId: null, activeSources: [] })
   },
 
   // Gestión de listas importadas
