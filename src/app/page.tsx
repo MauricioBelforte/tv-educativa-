@@ -92,42 +92,40 @@ export default function Home() {
       }
 
       if (isAuthenticated && authPassword) {
+        const nameExists = (name: string) =>
+          usePlayerStore.getState().importedLists.some(l => l.name === name)
+
         try {
           const privRes = await fetch(`/api/private-lists?password=${encodeURIComponent(authPassword)}`)
           if (privRes.ok) {
             const privateLists: { name: string; channels: Channel[] }[] = await privRes.json()
-            const existing = usePlayerStore.getState().importedLists
             for (const pl of privateLists) {
-              const exists = existing.some(l => l.isPrivate && l.name === pl.name)
-              if (!exists && pl.channels.length > 0) {
+              if (!nameExists(pl.name) && pl.channels.length > 0) {
                 addImportedList(pl.channels, pl.name, true)
               }
             }
           }
-        } catch (error) {
-          console.error('Error loading private lists:', error)
+        } catch {
+          // ignore
         }
 
         try {
           const syncRes = await fetch(`/api/sync-lists?password=${encodeURIComponent(authPassword)}`)
           if (syncRes.ok) {
             const syncData: { lists: { name: string; channels: Channel[] }[]; favorites: string[] } = await syncRes.json()
-            const existing = usePlayerStore.getState().importedLists
             for (const sl of syncData.lists) {
-              const exists = existing.some(l => l.isPrivate && l.name === sl.name)
-              if (!exists && sl.channels.length > 0) {
+              if (!nameExists(sl.name) && sl.channels.length > 0) {
                 addImportedList(sl.channels, sl.name, true)
               }
             }
-            // Sincronizar favoritos
             if (syncData.favorites?.length > 0) {
               const currentFavs = usePlayerStore.getState().favorites
               const merged = [...new Set([...currentFavs, ...syncData.favorites])]
               usePlayerStore.getState().setFavorites(merged)
             }
           }
-        } catch (error) {
-          console.error('Error loading synced lists:', error)
+        } catch {
+          // ignore
         }
       }
 

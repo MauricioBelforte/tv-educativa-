@@ -179,6 +179,8 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   logout: () => {
     saveToStorage('iptv-auth-password', '')
+    saveToStorage('iptv-imported-lists', [])
+    saveToStorage('iptv-active-sources', [])
     set({ isAuthenticated: false, authPassword: '', importedLists: [], activeListId: null, activeSources: [] })
   },
 
