@@ -11,9 +11,11 @@ export async function GET(request: NextRequest) {
   if (!isAuthorized(request)) return Response.json([])
   try {
     const data = await supabaseGet()
-    if (data === null) return Response.json({ lists: [], favorites: [] })
+    if (data === null) return Response.json({ lists: [], favorites: [], activeSources: [] })
     // Compatibilidad: si es array viejo, convertirlo
-    if (Array.isArray(data)) return Response.json({ lists: data, favorites: [] })
+    if (Array.isArray(data)) return Response.json({ lists: data, favorites: [], activeSources: [] })
+    // Compatibilidad: si no trae activeSources
+    if (!data.activeSources) data.activeSources = []
     return Response.json(data)
   } catch (error) {
     console.error('[sync-lists] Error GET:', error)
@@ -23,7 +25,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) return Response.json({ error: 'No autorizado' }, { status: 401 })
-  let body: { lists: unknown[]; favorites?: string[] }
+  let body: { lists: unknown[]; favorites?: string[]; activeSources?: string[] }
   try {
     body = await request.json()
   } catch {
@@ -33,8 +35,12 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Se requiere { lists: [...] }' }, { status: 400 })
   }
   try {
-    await supabaseUpsert({ lists: body.lists, favorites: body.favorites || [] })
-    return Response.json({ success: true, favorites: body.favorites || [] })
+    await supabaseUpsert({
+      lists: body.lists,
+      favorites: body.favorites || [],
+      activeSources: body.activeSources || [],
+    })
+    return Response.json({ success: true, favorites: body.favorites || [], activeSources: body.activeSources || [] })
   } catch (error) {
     console.error('[sync-lists] Error POST:', error)
     return Response.json({ error: String(error) }, { status: 500 })
