@@ -35,6 +35,7 @@ interface PlayerStore {
   setListDescription: (listId: string, description: string) => void
   removeList: (listId: string) => void
   removeChannelFromList: (listId: string, channelId: string) => void
+  addChannelsToList: (listId: string, channels: Channel[]) => void
   setActiveList: (listId: string | null) => void
   getListById: (listId: string) => ImportedList | undefined
   reorderLists: (fromIndex: number, toIndex: number) => void
@@ -259,6 +260,18 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
       importedLists: updatedLists,
       currentChannel: state.currentChannel?.id === channelId ? null : state.currentChannel,
     })
+  },
+
+  addChannelsToList: (listId, channels) => {
+    const state = get()
+    const updatedLists = state.importedLists.map(list => {
+      if (list.id !== listId) return list
+      const existing = new Set(list.channels.map(c => c.id))
+      const newChannels = channels.filter(c => !existing.has(c.id))
+      return { ...list, channels: [...list.channels, ...newChannels] }
+    })
+    saveToStorage('iptv-imported-lists', updatedLists)
+    set({ importedLists: updatedLists })
   },
 
   setActiveList: (listId) => set({ activeListId: listId }),

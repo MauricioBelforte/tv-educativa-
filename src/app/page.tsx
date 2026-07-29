@@ -152,6 +152,13 @@ export default function Home() {
     }
   }
 
+  const handleAppendToList = (listId: string, m3uContent: string) => {
+    const channels = parseM3U(m3uContent)
+    if (channels.length > 0) {
+      usePlayerStore.getState().addChannelsToList(listId, channels)
+    }
+  }
+
   const collapseImportedLists = () => {
     setImportedListsCollapseKey((value) => value + 1)
   }
@@ -344,7 +351,7 @@ export default function Home() {
                 <h2 className="text-lg font-semibold text-white">Listas</h2>
                 {isAuthenticated ? (
                   <>
-                    <M3UImporter onImport={handleM3UImport} />
+                    <M3UImporter onImport={handleM3UImport} onAppendToList={handleAppendToList} lists={importedLists} />
                     <div className="border-t border-gray-700" />
                     <ImportedListsManager collapseTrigger={importedListsCollapseKey} />
                     <div className="pt-3">
