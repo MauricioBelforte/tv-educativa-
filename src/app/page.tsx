@@ -115,15 +115,15 @@ export default function Home() {
           try {
             const syncRes = await fetch(`/api/sync-lists?password=${encodeURIComponent(authPassword)}`)
             if (syncRes.ok) {
-              const syncData: { lists: { name: string; channels: Channel[] }[]; favorites: string[]; activeSources: string[] } = await syncRes.json()
+              const syncData: { lists: { name: string; channels: Channel[] }[]; favorites: string[]; activeListNames: string[] } = await syncRes.json()
               if (syncData.lists?.length > 0) {
                 replacePrivateLists(syncData.lists)
               }
               if (syncData.favorites) {
                 usePlayerStore.getState().setFavorites(syncData.favorites)
               }
-              if (syncData.activeSources) {
-                usePlayerStore.getState().replaceActiveSources(syncData.activeSources)
+              if (syncData.activeListNames) {
+                usePlayerStore.getState().replaceActiveSourcesByName(syncData.activeListNames)
               }
             }
           } catch {
@@ -324,7 +324,9 @@ export default function Home() {
                                 channels: l.channels,
                               })),
                               favorites: state.favorites,
-                              activeSources: state.activeSources,
+                              activeListNames: state.importedLists
+                                .filter(l => state.activeSources.includes(l.id))
+                                .map(l => l.name),
                             }
                             const res = await fetch(`/api/sync-lists?password=${encodeURIComponent(state.authPassword)}`, {
                               method: 'POST',

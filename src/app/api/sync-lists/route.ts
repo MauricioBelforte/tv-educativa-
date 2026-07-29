@@ -11,11 +11,11 @@ export async function GET(request: NextRequest) {
   if (!isAuthorized(request)) return Response.json([])
   try {
     const data = await supabaseGet()
-    if (data === null) return Response.json({ lists: [], favorites: [], activeSources: [] })
+    if (data === null) return Response.json({ lists: [], favorites: [], activeListNames: [] })
     // Compatibilidad: si es array viejo, convertirlo
-    if (Array.isArray(data)) return Response.json({ lists: data, favorites: [], activeSources: [] })
-    // Compatibilidad: si no trae activeSources
-    if (!data.activeSources) data.activeSources = []
+    if (Array.isArray(data)) return Response.json({ lists: data, favorites: [], activeListNames: [] })
+    // Compatibilidad: si trae activeSources (IDs viejos) ignorarlo
+    if (!data.activeListNames) data.activeListNames = []
     return Response.json(data)
   } catch (error) {
     console.error('[sync-lists] Error GET:', error)
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   if (!isAuthorized(request)) return Response.json({ error: 'No autorizado' }, { status: 401 })
-  let body: { lists: unknown[]; favorites?: string[]; activeSources?: string[] }
+  let body: { lists: unknown[]; favorites?: string[]; activeListNames?: string[] }
   try {
     body = await request.json()
   } catch {
@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
     await supabaseUpsert({
       lists: body.lists,
       favorites: body.favorites || [],
-      activeSources: body.activeSources || [],
+      activeListNames: body.activeListNames || [],
     })
-    return Response.json({ success: true, favorites: body.favorites || [], activeSources: body.activeSources || [] })
+    return Response.json({ success: true, favorites: body.favorites || [], activeListNames: body.activeListNames || [] })
   } catch (error) {
     console.error('[sync-lists] Error POST:', error)
     return Response.json({ error: String(error) }, { status: 500 })

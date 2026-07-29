@@ -39,7 +39,7 @@ interface PlayerStore {
   getListById: (listId: string) => ImportedList | undefined
   reorderLists: (fromIndex: number, toIndex: number) => void
   replacePrivateLists: (lists: { name: string; channels: Channel[] }[]) => void
-  replaceActiveSources: (ids: string[]) => void
+  replaceActiveSourcesByName: (names: string[]) => void
   
   // Mover canales entre listas y cambiar categoría
   moveChannelToList: (fromListId: string, channelId: string, toListId: string) => void
@@ -278,12 +278,19 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
 
   replacePrivateLists: (lists) => {
     const state = get()
-    const syncNames = new Set(lists.map(l => l.name))
+
+    const seen = new Map<string, { name: string; channels: Channel[] }>()
+    for (const l of lists) {
+      seen.set(l.name, l)
+    }
+    const unique = Array.from(seen.values())
+
+    const syncNames = new Set(unique.map(l => l.name))
 
     const keep = state.importedLists.filter(l => !syncNames.has(l.name))
 
-    const newLists: ImportedList[] = lists.map((list, i) => ({
-      id: `synced-${Date.now()}-${i}`,
+    const newLists: ImportedList[] = unique.map((list) => ({
+      id: `sync-${list.name.replace(/[^a-zA-Z0-9]/g, '_')}`,
       name: list.name,
       channels: list.channels,
       createdAt: new Date().toISOString(),
@@ -297,7 +304,11 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ importedLists: updatedLists, activeListId: newLists.length > 0 ? newLists[0].id : state.activeListId })
   },
 
-  replaceActiveSources: (ids) => {
+  replaceActiveSourcesByName: (names) => {
+    const state = get()
+    const ids = state.importedLists
+      .filter(l => names.includes(l.name))
+      .map(l => l.id)
     saveToStorage('iptv-active-sources', ids)
     set({ activeSources: ids })
   },
