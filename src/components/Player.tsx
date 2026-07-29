@@ -126,7 +126,6 @@ export default function Player() {
           className="w-full aspect-video"
           allow="autoplay; encrypted-media; fullscreen"
           allowFullScreen
-          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
         />
       ) : (
         <>
