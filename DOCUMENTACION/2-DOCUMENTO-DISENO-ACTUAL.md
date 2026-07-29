@@ -44,11 +44,19 @@
 ## Store (Zustand)
 - `currentChannel`, `isPlaying`, `favorites`, `isDarkMode`, `showOnlineOnly`, `categoriesCollapsed`
 - `importedLists`, `activeListId`, `activeSources`, `isRefreshing`, `channelStatus`
-- `favoriteIds`, `channelListOpen`, `scanAllLists`
+- `favoriteIds`, `channelListOpen`, `scanAllLists`, `_initialized`
 - Acciones: gestión de listas (drag reorder), fuentes múltiples, refresco, favoritos
 - `checkAllChannels()` — 2 workers, 15s timeout, no deep
 - `fastRecheckAllChannels()` — 20 workers, deep=true
 - `channelStatus` → persistencia en localStorage (`iptv-channel-status`)
+- `replacePrivateLists(lists)` → elimina listas locales que coinciden por nombre con las del sync, inserta las nuevas con IDs estables (`sync-${nombre}`)
+- `replaceActiveSourcesByName(names)` → busca nombres en importedLists, resuelve IDs correctos y actualiza activeSources
+
+## Sincronizacion
+- **Flujo de descarga**: `initFromStorage()` restaura localStorage → `replacePrivateLists()` reemplaza listas privadas con data del cloud → `replaceActiveSourcesByName()` restaura checkboxes por nombre
+- **Flujo de subida**: el payload incluye `activeListNames` derivado de `importedLists.filter(l => activeSources.includes(l.id)).map(l => l.name)`
+- **Dedup**: tanto en descarga (`replacePrivateLists` usa Map por nombre) como en subida (el store solo tiene una copia de cada nombre)
+- **IDs estables**: basados en el nombre sanitizado, no en timestamps, para que los IDs sobrevivan a recargas
 
 ## API
 - `GET /api/channels` → Canales por defecto + locales

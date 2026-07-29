@@ -48,6 +48,13 @@ Cliente (Next.js) → API Routes → channels.ts / M3U Parser / EPG / Stream Pro
 - `GET /api/m3u-proxy?url=X` - Proxy de descarga de listas
 - `GET /api/check-stream?url=X&deep=true` - Verificación de salud del stream
 - `GET /api/private-lists` - Listas privadas desde variables de entorno (Vercel)
-- `GET /api/sync-lists` - Descargar listas sincronizadas desde Supabase
-- `POST /api/sync-lists` - Subir listas a Supabase
+- `GET /api/sync-lists` - Descargar listas sincronizadas desde Supabase (devuelve lists + favorites + activeListNames)
+- `POST /api/sync-lists` - Subir listas a Supabase (payload: lists + favorites + activeListNames)
 - `GET /api/check-password?p=XXX` - Validar contrasena de acceso
+
+## Sincronizacion entre dispositivos
+- Las listas se sincronizan por nombre (no por ID), evitando duplicados
+- `activeListNames` sincroniza que listas estan activas (checkeadas) por nombre
+- IDs de listas sincronizadas son estables: `sync-${nombre_sanitizado}`
+- `replacePrivateLists()` deduplica la data del cloud antes de insertar
+- Al descargar se reemplazan completamente las listas privadas, no se mezclan

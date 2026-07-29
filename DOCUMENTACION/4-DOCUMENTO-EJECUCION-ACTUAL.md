@@ -90,7 +90,29 @@ src/
 | `updateListDescription(id, desc)` | Editar descripcion de lista |
 | `checkAllChannels(channels)` | Verificar canales (2 workers, 15s timeout) |
 | `fastRecheckAllChannels(channels)` | Verificar canales (20 workers, deep) |
-| `initFromStorage()` | Cargar estado desde localStorage |
+| `initFromStorage()` | Cargar estado desde localStorage (tambien marca _initialized=true) |
+| `replacePrivateLists(lists)` | Reemplazar listas privadas con data del sync (dedup por nombre, IDs estables) |
+| `replaceActiveSourcesByName(names)` | Restaurar checkboxes buscando nombres en importedLists |
+
+## Sincronizacion (Sync)
+
+### Payload de subida
+```json
+{
+  "lists": [{ "name": "Mi Lista", "channels": [...] }],
+  "favorites": ["ch-1", "ch-2"],
+  "activeListNames": ["Mi Lista", "Otra Lista"]
+}
+```
+
+### Flujo de descarga
+1. `initFromStorage()` restaura importedLists, activeSources, favorites desde localStorage
+2. `replacePrivateLists()`:
+   - Deduplica la data del cloud por nombre (Map)
+   - Elimina cualquier lista local que coincida por nombre con el sync
+   - Inserta las listas del cloud con IDs estables: `sync-{nombre_sanitizado}`
+3. `replaceActiveSourcesByName()` busca los nombres en importedLists y actualiza activeSources con los IDs correctos
+4. `setFavorites()` reemplaza favoritos con los del cloud
 
 ## Verificacion de Canales
 

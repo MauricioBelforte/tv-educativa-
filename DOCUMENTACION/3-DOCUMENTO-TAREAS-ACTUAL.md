@@ -89,3 +89,16 @@
 - [x] Usuarios no autenticados ven solo canales por defecto
 - [x] Creacion de DOCUMENTACION/03-Login-Auth con plan-inicial y plan-actual
 - [x] Documentacion del componente con 5 archivos (01 al 05)
+
+### Fase 8 - Correcciones de Sincronización (Completada)
+- [x] Flag _initialized para evitar race condition entre initFromStorage y loadChannels
+- [x] Dedup de listas por nombre (no por isPrivate) en nameExists
+- [x] replacePrivateLists elimina todas las listas locales cuyo nombre coincide con el sync
+- [x] replacePrivateLists deduplica la data del cloud por nombre usando Map
+- [x] IDs estables para listas sincronizadas (basados en nombre sanitizado)
+- [x] activeListNames sincroniza checkboxes por nombre (no por ID)
+- [x] replaceActiveSourcesByName resuelve nombres a IDs en importedLists
+- [x] Logout limpia localStorage (iptv-imported-lists, iptv-active-sources)
+- [x] Payload de subida deriva activeListNames desde importedLists + activeSources
+- [x] API sync-lists actualizada para activeListNames con compatibilidad hacia atras
+- [x] Documentacion y log actualizados
