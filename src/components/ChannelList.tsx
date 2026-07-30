@@ -1,14 +1,22 @@
 'use client'
 
+import { useRef, useState } from 'react'
 import { Channel } from '@/lib/types'
 import ChannelCard from './ChannelCard'
 
 interface ChannelListProps {
   channels: Channel[]
   isLoading: boolean
+  reorderMode?: boolean
+  listId?: string | null
+  onReorder?: (listId: string, fromIndex: number, toIndex: number) => void
 }
 
-export default function ChannelList({ channels, isLoading }: ChannelListProps) {
+export default function ChannelList({ channels, isLoading, reorderMode, listId, onReorder }: ChannelListProps) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+  const dragNode = useRef<HTMLElement | null>(null)
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -40,11 +48,67 @@ export default function ChannelList({ channels, isLoading }: ChannelListProps) {
     )
   }
 
+  const handleDragStart = (e: React.DragEvent, index: number) => {
+    if (!reorderMode) return
+    setDragIndex(index)
+    dragNode.current = e.currentTarget as HTMLElement
+    e.dataTransfer.effectAllowed = 'move'
+    setTimeout(() => {
+      if (dragNode.current) dragNode.current.style.opacity = '0.5'
+    }, 0)
+  }
+
+  const handleDragEnd = () => {
+    if (dragNode.current) dragNode.current.style.opacity = ''
+    setDragIndex(null)
+    setDragOverIndex(null)
+    dragNode.current = null
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (!reorderMode || dragIndex === null) return
+    setDragOverIndex(index)
+  }
+
+  const handleDrop = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (!reorderMode || dragIndex === null || dragIndex === index) {
+      setDragIndex(null)
+      setDragOverIndex(null)
+      return
+    }
+    if (listId && onReorder) {
+      onReorder(listId, dragIndex, index)
+    }
+    setDragIndex(null)
+    setDragOverIndex(null)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null)
+  }
+
   return (
-    <div className="space-y-2">
-      {channels.map((channel) => (
-        <ChannelCard key={channel.id} channel={channel} />
-      ))}
+    <div className="space-y-1 select-none">
+      {channels.map((channel, index) => {
+        const isDragging = dragIndex === index
+        const isOver = dragOverIndex === index && dragIndex !== index
+        return (
+          <div
+            key={channel.id}
+            draggable={reorderMode}
+            onDragStart={(e) => handleDragStart(e, index)}
+            onDragEnd={handleDragEnd}
+            onDragOver={(e) => handleDragOver(e, index)}
+            onDrop={(e) => handleDrop(e, index)}
+            onDragLeave={handleDragLeave}
+            className={`transition-all duration-150 ${isDragging ? 'opacity-50' : ''} ${isOver ? 'translate-y-1 border-t-2 border-blue-500' : ''} ${reorderMode ? 'cursor-grab active:cursor-grabbing' : ''}`}
+          >
+            <ChannelCard channel={channel} />
+          </div>
+        )
+      })}
     </div>
   )
 }
