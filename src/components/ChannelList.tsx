@@ -53,6 +53,7 @@ export default function ChannelList({ channels, isLoading, reorderMode, listId, 
     setDragIndex(index)
     dragNode.current = e.currentTarget as HTMLElement
     e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
     setTimeout(() => {
       if (dragNode.current) dragNode.current.style.opacity = '0.5'
     }, 0)
