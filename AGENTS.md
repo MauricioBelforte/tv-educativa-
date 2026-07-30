@@ -387,3 +387,28 @@ Para generar el artefacto distribuible del proyecto:
 **Notas:**
 - [Notas específicas del proceso de build/package]
 - [Consideraciones de distribución]
+
+## 21. Cache Residual de Next.js (Directiva Obligatoria)
+
+Este proyecto sufre **cache residual** de Next.js que causa pérdida de estilos (sin colores, fuentes, iconos grandes) después de modificar archivos. Para evitarlo:
+
+### Automático
+Ejecutar `.\reset.ps1` en la raíz del proyecto — mata el servidor, borra `.next`, y lo reinicia.
+
+### Manual (si no funciona)
+```powershell
+Stop-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess -Force
+Remove-Item -Recurse -Force .next
+Start-Process -WindowStyle Hidden -FilePath "cmd.exe" -ArgumentList "/c npx next dev -p 3000"
+```
+
+### Regla para la IA
+**Cada vez que se edite un archivo del proyecto**, el agente **DEBE**:
+1. Ejecutar `.\reset.ps1` (o manual: borrar `.next`, matar servidor, restart)
+2. Esperar a que el script confirme que el servidor compiló y responde 200
+3. Recién ahí notificar al usuario
+
+**No confiar en HMR (Hot Module Replacement)** — siempre hard-reset.
+
+### Nota para el usuario
+Si al abrir el navegador ves la página sin estilos o con error, **actualizá UNA sola vez** (no dos). El `reset.ps1` ya forzó la compilación inicial. Si el problema persiste, ejecutá `.\reset.ps1` de nuevo.
