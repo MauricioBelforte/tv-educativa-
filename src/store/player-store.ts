@@ -30,7 +30,7 @@ interface PlayerStore {
   logout: () => void
   
   // Gestión de listas importadas
-  addImportedList: (channels: Channel[], sourceUrl?: string, isPrivate?: boolean) => string
+  addImportedList: (channels: Channel[], sourceUrl?: string, isPrivate?: boolean, name?: string) => string
   renameList: (listId: string, newName: string) => void
   setListDescription: (listId: string, description: string) => void
   removeList: (listId: string) => void
@@ -192,13 +192,13 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   },
 
   // Gestión de listas importadas
-  addImportedList: (channels, sourceUrl, isPrivate) => {
+  addImportedList: (channels, sourceUrl, isPrivate, name) => {
     const state = get()
     const listCount = state.importedLists.length + 1
-    const name = isPrivate ? (sourceUrl || `Lista Privada ${listCount}`) : `Lista ${listCount}`
+    const finalName = name || (isPrivate ? (sourceUrl || `Lista Privada ${listCount}`) : `Lista ${listCount}`)
     const newList: ImportedList = {
       id: generateId(),
-      name,
+      name: finalName,
       channels,
       createdAt: new Date().toISOString(),
       sourceUrl,

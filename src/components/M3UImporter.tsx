@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { ImportedList } from '@/lib/types'
+import { ImportedList, Channel } from '@/lib/types'
+import { parseM3U } from '@/lib/m3u-parser'
 
 interface M3UImporterProps {
-  onImport: (m3uContent: string, sourceUrl?: string) => void
+  onImport: (m3uContent: string, sourceUrl?: string, listName?: string) => void
   onAppendToList: (listId: string, m3uContent: string) => void
   lists: ImportedList[]
 }
@@ -12,11 +13,14 @@ interface M3UImporterProps {
 export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImporterProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [input, setInput] = useState('')
+  const [listName, setListName] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [batchOpen, setBatchOpen] = useState(false)
   const [batchInput, setBatchInput] = useState('')
   const [batchStatus, setBatchStatus] = useState<string | null>(null)
+  const [pendingRename, setPendingRename] = useState<{ channels: Channel[] } | null>(null)
+  const [renameValue, setRenameValue] = useState('')
 
   const handleImportFromUrl = async () => {
     if (!input.trim()) return
@@ -33,8 +37,9 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
       }
       
       const content = await res.text()
-      onImport(content, input.trim())
+      onImport(content, input.trim(), listName.trim() || undefined)
       setInput('')
+      setListName('')
       setIsOpen(false)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -47,8 +52,9 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
     if (!input.trim()) return
     
     if (input.includes('#EXTM3U') || input.includes('#EXTINF')) {
-      onImport(input)
+      onImport(input, undefined, listName.trim() || undefined)
       setInput('')
+      setListName('')
       setIsOpen(false)
     } else {
       setError('El contenido no parece ser una lista M3U válida (debe contener #EXTM3U o #EXTINF)')
@@ -56,6 +62,49 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
   }
 
   const isUrl = input.trim().startsWith('http://') || input.trim().startsWith('https://')
+
+  const handleBatchAdd = () => {
+    const select = document.querySelector('select') as HTMLSelectElement
+    const listId = select?.value
+    if (!listId || !batchInput.trim()) {
+      setBatchStatus('Error: seleccioná una lista y pegá contenido')
+      return
+    }
+
+    const parsed = parseM3U(batchInput)
+    if (parsed.length === 0) {
+      setBatchStatus('Error: no se pudo parsear ningún canal')
+      return
+    }
+
+    if (parsed.length === 1) {
+      setPendingRename({ channels: parsed })
+      setRenameValue(parsed[0].name)
+      return
+    }
+
+    onAppendToList(listId, batchInput)
+    setBatchInput('')
+    setBatchStatus(`${parsed.length} canales agregados`)
+    setTimeout(() => setBatchStatus(''), 3000)
+  }
+
+  const handleConfirmRename = () => {
+    if (!pendingRename) return
+    const select = document.querySelector('select') as HTMLSelectElement
+    const listId = select?.value
+    if (!listId) return
+
+    const renamed = [{ ...pendingRename.channels[0], name: renameValue.trim() || pendingRename.channels[0].name }]
+
+    const content = `#EXTM3U\n#EXTINF:-1,${renamed[0].name}\n${renamed[0].url}`
+    onAppendToList(listId, content)
+
+    setPendingRename(null)
+    setBatchInput('')
+    setBatchStatus(`"${renamed[0].name}" agregado`)
+    setTimeout(() => setBatchStatus(''), 3000)
+  }
 
   return (
     <div>
@@ -87,6 +136,14 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
             placeholder="https://m3u.cl/lista/AR.m3u"
             rows={2}
             className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
+          />
+
+          <input
+            type="text"
+            value={listName}
+            onChange={(e) => setListName(e.target.value)}
+            placeholder="Nombre de la lista (opcional)"
+            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
 
           {error && (
@@ -127,7 +184,6 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
         </div>
       )}
 
-      {/* Separador */}
       <div className="border-t border-gray-700 my-2" />
 
       {/* Agregar a lista existente */}
@@ -171,24 +227,43 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
             </div>
           )}
 
-          <button
-            onClick={() => {
-              const select = document.querySelector('select') as HTMLSelectElement
-              const listId = select?.value
-              if (!listId || !batchInput.trim()) {
-                setBatchStatus('Error: seleccioná una lista y pegá contenido')
-                return
-              }
-              onAppendToList(listId, batchInput)
-              setBatchInput('')
-              setBatchStatus('Canales agregados')
-              setTimeout(() => setBatchStatus(''), 3000)
-            }}
-            disabled={!batchInput.trim()}
-            className="w-full px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs rounded-lg transition-colors"
-          >
-            Agregar a lista
-          </button>
+          {pendingRename && (
+            <div className="p-3 bg-gray-900 rounded-lg border border-gray-700 space-y-2">
+              <p className="text-xs text-gray-400">Se detectó 1 canal. ¿Querés ponerle un nombre?</p>
+              <input
+                type="text"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-600 rounded-lg text-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Nombre del canal"
+                autoFocus
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPendingRename(null)}
+                  className="flex-1 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-gray-200 text-xs rounded-lg transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleConfirmRename}
+                  className="flex-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs rounded-lg transition-colors"
+                >
+                  Agregar como &ldquo;{renameValue.trim() || pendingRename.channels[0].name}&rdquo;
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!pendingRename && (
+            <button
+              onClick={handleBatchAdd}
+              disabled={!batchInput.trim()}
+              className="w-full px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs rounded-lg transition-colors"
+            >
+              Agregar a lista
+            </button>
+          )}
         </div>
       )}
     </div>

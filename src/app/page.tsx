@@ -145,10 +145,10 @@ export default function Home() {
     checkAllChannels(pending.map(c => ({ id: c.id, url: c.url! })))
   }, [allAvailableChannels, isLoading, checkAllChannels])
 
-  const handleM3UImport = (m3uContent: string, sourceUrl?: string) => {
+  const handleM3UImport = (m3uContent: string, sourceUrl?: string, listName?: string) => {
     const importedChannels = parseM3U(m3uContent)
     if (importedChannels.length > 0) {
-      addImportedList(importedChannels, sourceUrl, false)
+      addImportedList(importedChannels, sourceUrl, false, listName)
     }
   }
 
