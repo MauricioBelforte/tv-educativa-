@@ -435,7 +435,7 @@ export default function Home() {
           onClick={() => { if (channelListOpen) setChannelListOpen(false) }}
         >
           <div className="h-full max-w-7xl mx-auto space-y-6 p-4 lg:p-6">
-            <div className="bg-gray-900/70 rounded-xl border border-gray-800 overflow-hidden shadow-lg max-h-[55vh]">
+            <div className="bg-gray-900/70 rounded-xl border border-gray-800 overflow-hidden shadow-lg">
               <Player />
             </div>
             <EPGPanel />
