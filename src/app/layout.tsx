@@ -8,6 +8,10 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'TV Libre - Canales Gratuitos en Vivo',
   description: 'Plataforma educativa para ver canales de TV gratuitos en vivo. Proyecto de aprendizaje sobre streaming HLS y arquitectura web.',
+  icons: {
+    icon: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 }
 
 export default function RootLayout({
