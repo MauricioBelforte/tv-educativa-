@@ -97,7 +97,7 @@ export default function Player() {
   const iframeUrl = currentChannel.url + (currentChannel.url.includes('?') ? '&' : '?') + 'autoplay=1'
 
   return (
-    <div className="relative bg-black rounded-lg overflow-hidden group">
+    <div className="relative bg-black rounded-lg overflow-hidden group" onClick={(e) => e.stopPropagation()}>
       {isIframe ? (
         <iframe
           src={iframeUrl}
