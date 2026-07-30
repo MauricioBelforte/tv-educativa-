@@ -319,7 +319,7 @@ export default function Home() {
                               const prev = idx > 0 ? idx - 1 : filteredChannels.length - 1
                               if (filteredChannels[prev]) setChannel(filteredChannels[prev])
                             }}
-                            className="w-10 h-10 rounded-xl bg-gray-800/90 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-colors shadow-lg"
+                            className="w-10 h-10 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-colors shadow-lg"
                             title="Canal anterior"
                           >
                             <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -336,7 +336,7 @@ export default function Home() {
                               const next = idx < filteredChannels.length - 1 ? idx + 1 : 0
                               if (filteredChannels[next]) setChannel(filteredChannels[next])
                             }}
-                            className="w-10 h-10 rounded-xl bg-gray-800/90 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-colors shadow-lg"
+                            className="w-10 h-10 rounded-xl bg-gray-800 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-colors shadow-lg"
                             title="Siguiente canal"
                           >
                             <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
