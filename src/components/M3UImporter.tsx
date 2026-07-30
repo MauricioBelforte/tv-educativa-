@@ -21,6 +21,8 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
   const [batchStatus, setBatchStatus] = useState<string | null>(null)
   const [pendingRename, setPendingRename] = useState<{ channels: Channel[] } | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [batchNewList, setBatchNewList] = useState(false)
+  const [batchNewListName, setBatchNewListName] = useState('')
 
   const handleImportFromUrl = async () => {
     if (!input.trim()) return
@@ -63,7 +65,60 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
 
   const isUrl = input.trim().startsWith('http://') || input.trim().startsWith('https://')
 
+  const parsePlainUrls = (text: string): { name: string; url: string }[] => {
+    return text.split('\n')
+      .map(l => l.trim())
+      .filter(l => l.startsWith('http://') || l.startsWith('https://'))
+      .map(url => {
+        try {
+          const params = new URLSearchParams(url.split('?')[1] || '')
+          const name = params.get('channel') || url.split('/').pop()?.split('?')[0] || 'Canal'
+          return { name: decodeURIComponent(name), url }
+        } catch {
+          return { name: 'Canal', url }
+        }
+      })
+  }
+
   const handleBatchAdd = () => {
+    if (!batchInput.trim()) {
+      setBatchStatus('Error: pegá URLs o contenido M3U')
+      return
+    }
+
+    const isPlainUrls = !batchInput.includes('#EXTM3U') && !batchInput.includes('#EXTINF')
+
+    if (isPlainUrls) {
+      const channels = parsePlainUrls(batchInput)
+      if (channels.length === 0) {
+        setBatchStatus('Error: no se encontraron URLs válidas')
+        return
+      }
+
+      const m3uContent = `#EXTM3U\n${channels.map(c => `#EXTINF:-1,${c.name}\n${c.url}`).join('\n')}`
+
+      if (batchNewList) {
+        const name = batchNewListName.trim() || 'Nueva lista'
+        onImport(m3uContent, undefined, name)
+        setBatchInput('')
+        setBatchNewListName('')
+        setBatchOpen(false)
+        return
+      }
+
+      const select = document.querySelector('select') as HTMLSelectElement
+      const listId = select?.value
+      if (!listId) {
+        setBatchStatus('Error: seleccioná una lista o creá una nueva')
+        return
+      }
+      onAppendToList(listId, m3uContent)
+      setBatchInput('')
+      setBatchStatus(`${channels.length} canales agregados`)
+      setTimeout(() => setBatchStatus(''), 3000)
+      return
+    }
+
     const select = document.querySelector('select') as HTMLSelectElement
     const listId = select?.value
     if (!listId || !batchInput.trim()) {
@@ -203,20 +258,45 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
             Pega URLs o contenido M3U para agregar a una lista existente:
           </p>
 
-          <select
-            className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
-            defaultValue=""
-          >
-            <option value="" disabled>Seleccionar lista...</option>
-            {lists.map(l => (
-              <option key={l.id} value={l.id}>{l.name}</option>
-            ))}
-          </select>
+          <div className="flex gap-2 items-center">
+            <button
+              onClick={() => setBatchNewList(false)}
+              className={`flex-1 px-2 py-1 text-xs rounded-lg transition-colors ${!batchNewList ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-400 hover:text-gray-200'}`}
+            >
+              Lista existente
+            </button>
+            <button
+              onClick={() => setBatchNewList(true)}
+              className={`flex-1 px-2 py-1 text-xs rounded-lg transition-colors ${batchNewList ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-400 hover:text-gray-200'}`}
+            >
+              Nueva lista
+            </button>
+          </div>
+
+          {!batchNewList ? (
+            <select
+              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              defaultValue=""
+            >
+              <option value="" disabled>Seleccionar lista...</option>
+              {lists.map(l => (
+                <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={batchNewListName}
+              onChange={(e) => setBatchNewListName(e.target.value)}
+              placeholder="Nombre de la nueva lista"
+              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          )}
 
           <textarea
             value={batchInput}
             onChange={(e) => { setBatchInput(e.target.value); setBatchStatus(null) }}
-            placeholder="https://ejemplo.com/canal1.m3u8&#10;https://ejemplo.com/canal2.php&#10;o contenido #EXTM3U..."
+            placeholder="https://ejemplo.com/canal1.m3u8&#10;https://ejemplo.com/canal2.php&#10;o URLs sueltas (se autogeneran nombres)"
             rows={4}
             className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-mono"
           />
@@ -261,7 +341,7 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
               disabled={!batchInput.trim()}
               className="w-full px-3 py-1.5 bg-green-600 hover:bg-green-700 disabled:bg-gray-700 disabled:text-gray-500 text-white text-xs rounded-lg transition-colors"
             >
-              Agregar a lista
+              {batchNewList ? 'Crear lista' : 'Agregar a lista'}
             </button>
           )}
         </div>
