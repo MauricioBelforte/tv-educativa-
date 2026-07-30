@@ -79,7 +79,11 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
         }
       })
 
-    entries.sort((a, b) => a.name.localeCompare(b.name))
+    const firstOccurrence = new Map<string, number>()
+    entries.forEach((e, i) => {
+      if (!firstOccurrence.has(e.name)) firstOccurrence.set(e.name, i)
+    })
+    entries.sort((a, b) => firstOccurrence.get(a.name)! - firstOccurrence.get(b.name)!)
 
     const nameCounts = new Map<string, number>()
     for (const e of entries) {
