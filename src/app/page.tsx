@@ -161,8 +161,8 @@ export default function Home() {
     }
   }
 
-  const handleReorder = (listId: string, fromIndex: number, toIndex: number) => {
-    reorderChannels(listId, fromIndex, toIndex)
+  const handleReorder = (listId: string, channelId: string, targetChannelId: string) => {
+    reorderChannels(listId, channelId, targetChannelId)
   }
 
   const collapseImportedLists = () => {

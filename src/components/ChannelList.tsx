@@ -9,7 +9,7 @@ interface ChannelListProps {
   isLoading: boolean
   reorderMode?: boolean
   listId?: string | null
-  onReorder?: (listId: string, fromIndex: number, toIndex: number) => void
+  onReorder?: (listId: string, channelId: string, targetChannelId: string) => void
 }
 
 export default function ChannelList({ channels, isLoading, reorderMode, listId, onReorder }: ChannelListProps) {
@@ -80,7 +80,11 @@ export default function ChannelList({ channels, isLoading, reorderMode, listId, 
       return
     }
     if (listId && onReorder) {
-      onReorder(listId, dragIndex, index)
+      const fromChannel = channels[dragIndex]
+      const toChannel = channels[index]
+      if (fromChannel && toChannel) {
+        onReorder(listId, fromChannel.id, toChannel.id)
+      }
     }
     setDragIndex(null)
     setDragOverIndex(null)

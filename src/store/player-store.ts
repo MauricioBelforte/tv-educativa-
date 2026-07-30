@@ -49,7 +49,7 @@ interface PlayerStore {
   moveChannelToList: (fromListId: string, channelId: string, toListId: string) => void
   changeChannelCategory: (listId: string, channelId: string, newCategory: string) => void
   renameChannel: (listId: string, channelId: string, newName: string) => void
-  reorderChannels: (listId: string, fromIndex: number, toIndex: number) => void
+  reorderChannels: (listId: string, channelId: string, targetChannelId: string) => void
   
   // Obtener canales favoritos de todas las listas
   getFavoriteChannels: () => Channel[]
@@ -391,13 +391,17 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
     set({ importedLists: updatedLists })
   },
 
-  reorderChannels: (listId, fromIndex, toIndex) => {
+  reorderChannels: (listId, channelId, targetChannelId) => {
     const state = get()
     const updatedLists = state.importedLists.map(list => {
       if (list.id !== listId) return list
       const channels = [...list.channels]
-      const [moved] = channels.splice(fromIndex, 1)
-      channels.splice(toIndex, 0, moved)
+      const fromIdx = channels.findIndex(c => c.id === channelId)
+      const toIdx = channels.findIndex(c => c.id === targetChannelId)
+      if (fromIdx === -1 || toIdx === -1) return list
+      const [moved] = channels.splice(fromIdx, 1)
+      const adjustedTo = fromIdx < toIdx ? toIdx - 1 : toIdx
+      channels.splice(adjustedTo, 0, moved)
       return { ...list, channels }
     })
     saveToStorage('iptv-imported-lists', updatedLists)
