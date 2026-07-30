@@ -37,9 +37,12 @@ export async function GET(request: NextRequest) {
   }
 
   let targetUrl: string
+  let referer: string | null
   try {
     targetUrl = decodeURIComponent(rawUrl)
     new URL(targetUrl)
+    const rawReferer = searchParams.get('referer')
+    referer = rawReferer ? decodeURIComponent(rawReferer) : null
   } catch {
     return NextResponse.json({ error: 'URL inválida' }, { status: 400 })
   }
@@ -48,8 +51,13 @@ export async function GET(request: NextRequest) {
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
   try {
+    const targetOrigin = new URL(targetUrl).origin
+    const headers: Record<string, string> = {
+      'User-Agent': USER_AGENT,
+      'Referer': referer ? new URL(referer).origin + '/' : targetOrigin + '/',
+    }
     const response = await fetch(targetUrl, {
-      headers: { 'User-Agent': USER_AGENT },
+      headers,
       signal: controller.signal,
     })
 

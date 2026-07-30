@@ -28,9 +28,11 @@ export async function GET(request: NextRequest) {
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
   try {
+    const targetOrigin = new URL(targetUrl).origin
     const response = await fetch(targetUrl, {
       headers: {
         'User-Agent': USER_AGENT,
+        'Referer': targetOrigin + '/',
         Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       },
       signal: controller.signal,

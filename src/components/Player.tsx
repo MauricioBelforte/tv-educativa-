@@ -4,9 +4,11 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import Hls from 'hls.js'
 import { usePlayerStore } from '@/store/player-store'
 
-function getProxyUrl(url: string): string {
+function getProxyUrl(url: string, referer?: string): string {
   if (!url.startsWith('http')) return url
-  return `/api/stream-proxy?url=${encodeURIComponent(url)}`
+  let path = `/api/stream-proxy?url=${encodeURIComponent(url)}`
+  if (referer) path += `&referer=${encodeURIComponent(referer)}`
+  return path
 }
 
 export default function Player() {
@@ -37,7 +39,7 @@ export default function Player() {
     destroyHls()
 
     const streamUrl = detectedUrl || currentChannel.url
-    const url = getProxyUrl(streamUrl)
+    const url = getProxyUrl(streamUrl, detectedUrl ? currentChannel.url : undefined)
 
     if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
       videoRef.current.src = url
