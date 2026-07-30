@@ -19,7 +19,6 @@ export default function Player() {
   const isPlaying = usePlayerStore((state) => state.isPlaying)
   const togglePlay = usePlayerStore((state) => state.togglePlay)
   const detectedStreams = usePlayerStore((state) => state.detectedStreams)
-  const clearDetectedStream = usePlayerStore((state) => state.clearDetectedStream)
 
   const destroyHls = useCallback(() => {
     if (hlsRef.current) {
@@ -138,13 +137,8 @@ export default function Player() {
         </div>
       )}
 
-      {detectedUrl && (
-        <button
-          onClick={() => clearDetectedStream(currentChannel.id)}
-          className="absolute bottom-3 right-3 z-10 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition-colors shadow-lg"
-        >
-          Volver a iframe
-        </button>
+      {detectedUrl && currentChannel.playerType !== 'hls' && (
+        <div className="absolute top-3 right-3 z-10 w-2 h-2 bg-green-500 rounded-full shadow-lg shadow-green-500/50" title="Stream directo detectado" />
       )}
 
       <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
