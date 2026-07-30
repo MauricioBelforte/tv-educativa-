@@ -66,18 +66,32 @@ export default function M3UImporter({ onImport, onAppendToList, lists }: M3UImpo
   const isUrl = input.trim().startsWith('http://') || input.trim().startsWith('https://')
 
   const parsePlainUrls = (text: string): { name: string; url: string }[] => {
-    return text.split('\n')
+    const entries = text.split('\n')
       .map(l => l.trim())
       .filter(l => l.startsWith('http://') || l.startsWith('https://'))
       .map(url => {
         try {
           const params = new URLSearchParams(url.split('?')[1] || '')
-          const name = params.get('channel') || url.split('/').pop()?.split('?')[0] || 'Canal'
-          return { name: decodeURIComponent(name), url }
+          const name = decodeURIComponent(params.get('channel') || url.split('/').pop()?.split('?')[0] || 'Canal')
+          return { name, url }
         } catch {
           return { name: 'Canal', url }
         }
       })
+
+    const nameCounts = new Map<string, number>()
+    for (const e of entries) {
+      nameCounts.set(e.name, (nameCounts.get(e.name) || 0) + 1)
+    }
+
+    const counters = new Map<string, number>()
+    return entries.map(e => {
+      const count = nameCounts.get(e.name) || 0
+      if (count <= 1) return e
+      const idx = (counters.get(e.name) || 0) + 1
+      counters.set(e.name, idx)
+      return { ...e, name: `${e.name} ${idx}` }
+    })
   }
 
   const handleBatchAdd = () => {
