@@ -219,7 +219,7 @@ export default function Home() {
       }} />}
       <Header searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <main className="flex-1 w-full min-h-0 flex">
-        <div className="h-full w-80 flex-shrink-0 border-r border-gray-800 flex flex-col">
+        <div className="h-full w-96 flex-shrink-0 border-r border-gray-800 flex flex-col">
           <div className="h-12 flex-shrink-0 bg-slate-900 border-b border-gray-800 flex items-center px-3 gap-1">
             <button
               onClick={() => setChannelListOpen(!channelListOpen)}
@@ -435,7 +435,7 @@ export default function Home() {
           onClick={() => { if (channelListOpen) setChannelListOpen(false) }}
         >
           <div className="h-full max-w-7xl mx-auto space-y-6 p-4 lg:p-6">
-            <div className="bg-gray-900/70 rounded-xl border border-gray-800 overflow-hidden shadow-lg">
+            <div className="bg-gray-900/70 rounded-xl border border-gray-800 overflow-hidden shadow-lg max-h-[55vh]">
               <Player />
             </div>
             <EPGPanel />
