@@ -22,7 +22,7 @@ export default function ChannelList({ channels, isLoading, reorderMode, listId, 
   useEffect(() => {
     if (!currentChannelId) return
     const el = listRef.current?.querySelector(`[data-channel-id="${currentChannelId}"]`)
-    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }, [currentChannelId])
 
   if (isLoading) {
