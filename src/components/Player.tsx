@@ -14,7 +14,9 @@ export default function Player() {
   const hlsRef = useRef<Hls | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  
+  const [hlsUrl, setHlsUrl] = useState<string | null>(null)
+  const [probing, setProbing] = useState(false)
+
   const currentChannel = usePlayerStore((state) => state.currentChannel)
   const isPlaying = usePlayerStore((state) => state.isPlaying)
   const togglePlay = usePlayerStore((state) => state.togglePlay)
@@ -26,80 +28,92 @@ export default function Player() {
     }
   }, [])
 
-  useEffect(() => {
+  function getIsIframe(ch: typeof currentChannel): boolean {
+    if (!ch) return false
+    return ch.playerType === 'iframe' || (!ch.url.includes('.m3u8') && ch.url.startsWith('http'))
+  }
+
+  const setupHls = useCallback((url: string) => {
     const video = videoRef.current
-    if (!video || !currentChannel) return
+    if (!video) return
 
     setIsLoading(true)
-    setError(null)
-    destroyHls()
-
-    const url = getProxyUrl(currentChannel.url)
+    const proxyUrl = getProxyUrl(url)
 
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = url
+      video.src = proxyUrl
       video.addEventListener('loadedmetadata', () => setIsLoading(false))
-      video.addEventListener('error', () => {
-        setError('Error al cargar el stream')
-        setIsLoading(false)
-      })
+      video.addEventListener('error', () => { setError('Error al cargar el stream'); setIsLoading(false) })
     } else if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-      })
-      
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: true })
       hlsRef.current = hls
-      
-      hls.loadSource(url)
+      hls.loadSource(proxyUrl)
       hls.attachMedia(video)
-      
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setIsLoading(false)
-        if (isPlaying) {
-          video.play().catch(() => {
-            setError('Haz clic para reproducir')
-          })
-        }
+        if (isPlaying) video.play().catch(() => setError('Haz clic para reproducir'))
       })
-      
-      hls.on(Hls.Events.ERROR, (event, data) => {
+      hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              setError('Error de red - Stream no disponible')
-              break
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              setError('Error en el stream')
-              break
-            default:
-              setError('Error al reproducir el stream')
-          }
+          setError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Error de red' : 'Error en el stream')
           setIsLoading(false)
         }
       })
     } else {
-      setError('Tu navegador no soporta reproducción HLS')
+      setError('Navegador no soporta HLS')
       setIsLoading(false)
     }
+  }, [isPlaying])
 
-    return () => {
-      destroyHls()
+  useEffect(() => {
+    setHlsUrl(null)
+    setError(null)
+    destroyHls()
+
+    if (!currentChannel || !getIsIframe(currentChannel)) {
+      setProbing(false)
+      if (currentChannel && !getIsIframe(currentChannel)) {
+        setupHls(currentChannel.url)
+      }
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentChannel, destroyHls])
 
-  // Controlar play/pause
+    const ch = currentChannel
+    setProbing(true)
+
+    async function probe() {
+      if (!ch) { setProbing(false); return }
+      try {
+        const res = await fetch(`/api/probe-iframe?url=${encodeURIComponent(ch.url)}`)
+        if (!res.ok) { setProbing(false); return }
+        const data = await res.json()
+        if (data.found && data.url) {
+          setHlsUrl(data.url)
+          setProbing(false)
+          setupHls(data.url)
+        } else {
+          setProbing(false)
+        }
+      } catch {
+        setProbing(false)
+      }
+    }
+
+    probe()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentChannel])
+
   useEffect(() => {
     const video = videoRef.current
     if (!video || !currentChannel) return
+    if (getIsIframe(currentChannel) && !hlsUrl) return
 
     if (isPlaying) {
       video.play().catch(() => {})
     } else {
       video.pause()
     }
-  }, [isPlaying, currentChannel])
+  }, [isPlaying, currentChannel, hlsUrl])
 
   if (!currentChannel) {
     return (
@@ -116,22 +130,36 @@ export default function Player() {
     )
   }
 
-  const isIframe = currentChannel.playerType === 'iframe' || (!currentChannel.url.includes('.m3u8') && currentChannel.url.startsWith('http'))
+  const channel = currentChannel
+
+  const isIframe = channel.playerType === 'iframe' || (!channel.url.includes('.m3u8') && channel.url.startsWith('http'))
+  const showIframe = isIframe && !hlsUrl && !probing
+  const showProbing = isIframe && probing
 
   const iframeUrl = isIframe
-    ? currentChannel.url + (currentChannel.url.includes('?') ? '&' : '?') + 'autoplay=1'
-    : currentChannel.url
+    ? channel.url + (channel.url.includes('?') ? '&' : '?') + 'autoplay=1'
+    : channel.url
 
   return (
     <div className="relative bg-black rounded-lg overflow-hidden group">
-      {isIframe ? (
+      {showProbing && (
+        <div className="flex items-center justify-center w-full aspect-video bg-black">
+          <div className="text-center">
+            <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-white text-sm">Buscando stream directo...</p>
+            <p className="text-gray-500 text-xs mt-2">Si no encuentra, carga en iframe</p>
+          </div>
+        </div>
+      )}
+      {showIframe && (
         <iframe
           src={iframeUrl}
           className="w-full aspect-video"
           allow="autoplay; encrypted-media; fullscreen"
           allowFullScreen
         />
-      ) : (
+      )}
+      {!showProbing && !showIframe && (
         <>
           <video
             ref={videoRef}
@@ -140,7 +168,6 @@ export default function Player() {
             playsInline
             onClick={togglePlay}
           />
-          {/* Overlay de carga */}
           {isLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/60">
               <div className="text-center">
@@ -149,7 +176,6 @@ export default function Player() {
               </div>
             </div>
           )}
-          {/* Overlay de error */}
           {error && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/80">
               <div className="text-center px-4">
@@ -157,28 +183,24 @@ export default function Player() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                 </svg>
                 <p className="text-white text-sm mb-2">{error}</p>
-                <p className="text-gray-400 text-xs">
-                  {currentChannel.name} - {currentChannel.category}
-                </p>
               </div>
             </div>
           )}
         </>
       )}
-      
-      {/* Info del canal */}
+
       <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         <div className="flex items-center gap-2">
-          {currentChannel.logo && (
+          {channel.logo && (
             <img
-              src={currentChannel.logo}
-              alt={currentChannel.name}
+              src={channel.logo}
+              alt={channel.name}
               className="w-8 h-8 rounded"
             />
           )}
           <div>
-            <p className="text-white text-sm font-medium">{currentChannel.name}</p>
-            <p className="text-gray-300 text-xs">{currentChannel.category}</p>
+            <p className="text-white text-sm font-medium">{channel.name}</p>
+            <p className="text-gray-300 text-xs">{channel.category}</p>
           </div>
         </div>
       </div>
