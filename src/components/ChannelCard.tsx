@@ -205,7 +205,7 @@ export default function ChannelCard({ channel, listId: propListId, allCategories
                       </svg>
                       Renombrar
                     </button>
-                    {channel.playerType === 'iframe' && !channel.url.includes('.m3u8') && (
+                    {!channel.url.includes('.m3u8') && (
                       <>
                         <div className="border-t border-gray-700 my-1" />
                         <button
