@@ -118,11 +118,15 @@ export default function Player() {
 
   const isIframe = currentChannel.playerType === 'iframe' || (!currentChannel.url.includes('.m3u8') && currentChannel.url.startsWith('http'))
 
+  const iframeUrl = isIframe
+    ? currentChannel.url + (currentChannel.url.includes('?') ? '&' : '?') + 'autoplay=1'
+    : currentChannel.url
+
   return (
     <div className="relative bg-black rounded-lg overflow-hidden group">
       {isIframe ? (
         <iframe
-          src={currentChannel.url}
+          src={iframeUrl}
           className="w-full aspect-video"
           allow="autoplay; encrypted-media; fullscreen"
           allowFullScreen
