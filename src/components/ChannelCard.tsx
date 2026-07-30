@@ -10,7 +10,7 @@ interface ChannelCardProps {
   allCategories?: string[]
 }
 
-export default function ChannelCard({ channel, listId, allCategories = [] }: ChannelCardProps) {
+export default function ChannelCard({ channel, listId: propListId, allCategories = [] }: ChannelCardProps) {
   const setChannel = usePlayerStore((state) => state.setChannel)
   const currentChannel = usePlayerStore((state) => state.currentChannel)
   const toggleFavorite = usePlayerStore((state) => state.toggleFavorite)
@@ -20,6 +20,10 @@ export default function ChannelCard({ channel, listId, allCategories = [] }: Cha
   const importedLists = usePlayerStore((state) => state.importedLists)
   const channelStatus = usePlayerStore((state) => state.channelStatus)
   const renameChannel = usePlayerStore((state) => state.renameChannel)
+
+  // Auto-detectar la lista a la que pertenece este canal
+  const ownerList = importedLists.find(l => l.channels.some(c => c.id === channel.id))
+  const listId = ownerList?.id || propListId
 
   const [menuOpen, setMenuOpen] = useState(false)
   const [editing, setEditing] = useState(false)
