@@ -116,7 +116,7 @@ export default function Player() {
     )
   }
 
-  const isIframe = currentChannel.playerType === 'iframe'
+  const isIframe = currentChannel.playerType === 'iframe' || (!currentChannel.url.includes('.m3u8') && currentChannel.url.startsWith('http'))
 
   return (
     <div className="relative bg-black rounded-lg overflow-hidden group">
