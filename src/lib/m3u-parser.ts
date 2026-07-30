@@ -13,19 +13,41 @@ export function parseM3U(content: string): Channel[] {
   const channels: Channel[] = []
   
   let currentExtInf: string | null = null
+  let hasExtInf = false
   
   for (const line of lines) {
     const trimmed = line.trim()
     
     if (trimmed.startsWith('#EXTINF:')) {
+      hasExtInf = true
       currentExtInf = trimmed
     } else if (currentExtInf && !trimmed.startsWith('#') && trimmed.length > 0) {
-      // La línea después de #EXTINF es la URL del stream
       const channel = parseChannel(currentExtInf, trimmed)
-      if (channel) {
-        channels.push(channel)
-      }
+      if (channel) channels.push(channel)
       currentExtInf = null
+    }
+  }
+  
+  // Si no había #EXTINF, tratar cada línea como URL directa
+  if (!hasExtInf) {
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) continue
+      try {
+        const parsed = new URL(trimmed)
+        const name = parsed.searchParams.get('stream') || parsed.searchParams.get('channel') || parsed.pathname.split('/').pop()?.split('.')[0] || parsed.hostname
+        channels.push({
+          id: `inline-${Math.random().toString(36).substr(2, 9)}`,
+          name,
+          logo: `https://via.placeholder.com/80x80/3b82f6/ffffff?text=${encodeURIComponent(name.charAt(0).toUpperCase())}`,
+          url: trimmed,
+          category: 'General',
+          isLive: true,
+          playerType: trimmed.includes('.m3u8') ? 'hls' : 'iframe',
+        })
+      } catch {
+        // no es URL válida, ignorar
+      }
     }
   }
   
