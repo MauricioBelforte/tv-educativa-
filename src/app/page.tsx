@@ -309,38 +309,42 @@ export default function Home() {
                     </div>
                     <div className="relative">
                       <ChannelList channels={filteredChannels} isLoading={isLoading && !activeListId} />
-                      <div className="sticky bottom-0 left-0 right-0 flex justify-center gap-4 py-3 bg-gradient-to-t from-slate-900 via-slate-900/95 to-transparent">
-                        <button
-                          onClick={() => {
-                            const idx = currentChannel
-                              ? filteredChannels.findIndex(c => c.id === currentChannel.id)
-                              : -1
-                            const prev = idx > 0 ? idx - 1 : filteredChannels.length - 1
-                            if (filteredChannels[prev]) setChannel(filteredChannels[prev])
-                          }}
-                          className="w-12 h-10 rounded-xl bg-gray-800/90 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-colors"
-                          title="Canal anterior"
-                        >
-                          <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => {
-                            const idx = currentChannel
-                              ? filteredChannels.findIndex(c => c.id === currentChannel.id)
-                              : -2
-                            const next = idx < filteredChannels.length - 1 ? idx + 1 : 0
-                            if (filteredChannels[next]) setChannel(filteredChannels[next])
-                          }}
-                          className="w-12 h-10 rounded-xl bg-gray-800/90 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-colors"
-                          title="Siguiente canal"
-                        >
-                          <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </div>
+                      <div className="sticky bottom-12 right-0 flex flex-col gap-2 items-end pr-3 pb-3 pointer-events-none">
+                        <div className="pointer-events-auto">
+                          <button
+                            onClick={() => {
+                              const idx = currentChannel
+                                ? filteredChannels.findIndex(c => c.id === currentChannel.id)
+                                : -1
+                              const prev = idx > 0 ? idx - 1 : filteredChannels.length - 1
+                              if (filteredChannels[prev]) setChannel(filteredChannels[prev])
+                            }}
+                            className="w-10 h-10 rounded-xl bg-gray-800/90 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-colors shadow-lg"
+                            title="Canal anterior"
+                          >
+                            <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div className="pointer-events-auto">
+                          <button
+                            onClick={() => {
+                              const idx = currentChannel
+                                ? filteredChannels.findIndex(c => c.id === currentChannel.id)
+                                : -2
+                              const next = idx < filteredChannels.length - 1 ? idx + 1 : 0
+                              if (filteredChannels[next]) setChannel(filteredChannels[next])
+                            }}
+                            className="w-10 h-10 rounded-xl bg-gray-800/90 hover:bg-gray-700 border border-gray-700 flex items-center justify-center transition-colors shadow-lg"
+                            title="Siguiente canal"
+                          >
+                            <svg className="w-5 h-5 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+                    </div>
+                  </div>
                     </div>
                   </div>
                 </div>
