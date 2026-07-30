@@ -18,9 +18,8 @@ export default function Player() {
   const currentChannel = usePlayerStore((state) => state.currentChannel)
   const isPlaying = usePlayerStore((state) => state.isPlaying)
   const togglePlay = usePlayerStore((state) => state.togglePlay)
-
-  const [probing, setProbing] = useState(false)
-  const [hlsUrl, setHlsUrl] = useState<string | null>(null)
+  const detectedStreams = usePlayerStore((state) => state.detectedStreams)
+  const clearDetectedStream = usePlayerStore((state) => state.clearDetectedStream)
 
   const destroyHls = useCallback(() => {
     if (hlsRef.current) {
@@ -29,16 +28,17 @@ export default function Player() {
     }
   }, [])
 
+  const detectedUrl = currentChannel ? detectedStreams[currentChannel.id] : null
+
   useEffect(() => {
     if (!videoRef.current || !currentChannel) return
 
     setIsLoading(true)
     setError(null)
-    setHlsUrl(null)
-    setProbing(false)
     destroyHls()
 
-    const url = getProxyUrl(currentChannel.url)
+    const streamUrl = detectedUrl || currentChannel.url
+    const url = getProxyUrl(streamUrl)
 
     if (videoRef.current.canPlayType('application/vnd.apple.mpegurl')) {
       videoRef.current.src = url
@@ -48,37 +48,17 @@ export default function Player() {
         setIsLoading(false)
       })
     } else if (Hls.isSupported()) {
-      const hls = new Hls({
-        enableWorker: true,
-        lowLatencyMode: true,
-      })
-
+      const hls = new Hls({ enableWorker: true, lowLatencyMode: true })
       hlsRef.current = hls
-
       hls.loadSource(url)
       hls.attachMedia(videoRef.current)
-
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         setIsLoading(false)
-        if (isPlaying) {
-          videoRef.current?.play().catch(() => {
-            setError('Haz clic para reproducir')
-          })
-        }
+        if (isPlaying) videoRef.current?.play().catch(() => setError('Haz clic para reproducir'))
       })
-
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
-          switch (data.type) {
-            case Hls.ErrorTypes.NETWORK_ERROR:
-              setError('Error de red - Stream no disponible')
-              break
-            case Hls.ErrorTypes.MEDIA_ERROR:
-              setError('Error en el stream')
-              break
-            default:
-              setError('Error al reproducir el stream')
-          }
+          setError(data.type === Hls.ErrorTypes.NETWORK_ERROR ? 'Error de red' : 'Error en el stream')
           setIsLoading(false)
         }
       })
@@ -87,66 +67,16 @@ export default function Player() {
       setIsLoading(false)
     }
 
-    return () => {
-      destroyHls()
-    }
+    return () => { destroyHls() }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentChannel, destroyHls])
+  }, [currentChannel, detectedUrl, destroyHls])
 
   useEffect(() => {
     const video = videoRef.current
     if (!video || !currentChannel) return
-
-    if (isPlaying) {
-      video.play().catch(() => {})
-    } else {
-      video.pause()
-    }
+    if (isPlaying) video.play().catch(() => {})
+    else video.pause()
   }, [isPlaying, currentChannel])
-
-  const handleDetectStream = async () => {
-    if (!currentChannel) return
-    setProbing(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/probe-iframe?url=${encodeURIComponent(currentChannel.url)}`)
-      const data = await res.json()
-      if (data.found && data.url) {
-        setHlsUrl(data.url)
-        destroyHls()
-
-        const url = getProxyUrl(data.url)
-        if (Hls.isSupported()) {
-          const hls = new Hls({ enableWorker: true, lowLatencyMode: true })
-          hlsRef.current = hls
-          hls.loadSource(url)
-          if (videoRef.current) {
-            hls.attachMedia(videoRef.current)
-            setIsLoading(true)
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              setIsLoading(false)
-              videoRef.current?.play().catch(() => {})
-            })
-            hls.on(Hls.Events.ERROR, (_event, evData) => {
-              if (evData.fatal) {
-                setError('El stream detectado no es accesible')
-                setIsLoading(false)
-                setHlsUrl(null)
-              }
-            })
-          }
-        } else {
-          setError('Navegador no soporta HLS')
-        }
-      } else {
-        setError('No se encontró stream directo en esta página')
-      }
-    } catch {
-      setError('Error al analizar la página')
-    } finally {
-      setProbing(false)
-    }
-  }
 
   if (!currentChannel) {
     return (
@@ -163,17 +93,20 @@ export default function Player() {
     )
   }
 
-  const isIframe = currentChannel.playerType === 'iframe' || (!currentChannel.url.includes('.m3u8') && currentChannel.url.startsWith('http'))
+  const isIframe = !detectedUrl && (currentChannel.playerType === 'iframe' || (!currentChannel.url.includes('.m3u8') && currentChannel.url.startsWith('http')))
 
-  const iframeUrl = isIframe
-    ? currentChannel.url + (currentChannel.url.includes('?') ? '&' : '?') + 'autoplay=1'
-    : currentChannel.url
-
-  const showVideo = hlsUrl || !isIframe
+  const iframeUrl = currentChannel.url + (currentChannel.url.includes('?') ? '&' : '?') + 'autoplay=1'
 
   return (
     <div className="relative bg-black rounded-lg overflow-hidden group">
-      {showVideo ? (
+      {isIframe ? (
+        <iframe
+          src={iframeUrl}
+          className="w-full aspect-video"
+          allow="autoplay; encrypted-media; fullscreen"
+          allowFullScreen
+        />
+      ) : (
         <>
           <video
             ref={videoRef}
@@ -190,62 +123,34 @@ export default function Player() {
               </div>
             </div>
           )}
-          {!currentChannel.url.includes('.m3u8') && !hlsUrl && isIframe && (
-            <button
-              onClick={handleDetectStream}
-              disabled={probing}
-              className="absolute bottom-3 right-3 z-10 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white text-xs rounded-lg transition-colors shadow-lg"
-            >
-              {probing ? 'Detectando...' : 'Detectar stream directo'}
-            </button>
-          )}
         </>
-      ) : (
-        <iframe
-          src={iframeUrl}
-          className="w-full aspect-video"
-          allow="autoplay; encrypted-media; fullscreen"
-          allowFullScreen
-        />
       )}
 
-      {error && (
+      {error && !isIframe && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/80">
           <div className="text-center px-4">
             <svg className="w-12 h-12 mx-auto mb-3 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
             <p className="text-white text-sm mb-2">{error}</p>
-            <p className="text-gray-400 text-xs">
-              {currentChannel.name} - {currentChannel.category}
-            </p>
-            {isIframe && !hlsUrl && (
-              <button onClick={handleDetectStream} className="mt-3 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded-lg transition-colors">
-                Reintentar detección
-              </button>
-            )}
+            <p className="text-gray-400 text-xs">{currentChannel.name}</p>
           </div>
         </div>
       )}
 
-      {!error && isIframe && !showVideo && (
+      {detectedUrl && (
         <button
-          onClick={handleDetectStream}
-          disabled={probing}
-          className="absolute bottom-3 right-3 z-10 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 text-white text-xs rounded-lg transition-colors shadow-lg"
+          onClick={() => clearDetectedStream(currentChannel.id)}
+          className="absolute bottom-3 right-3 z-10 px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white text-xs rounded-lg transition-colors shadow-lg"
         >
-          {probing ? 'Detectando...' : 'Detectar stream directo'}
+          Volver a iframe
         </button>
       )}
 
       <div className="absolute top-0 left-0 right-0 p-3 bg-gradient-to-b from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
         <div className="flex items-center gap-2">
           {currentChannel.logo && (
-            <img
-              src={currentChannel.logo}
-              alt={currentChannel.name}
-              className="w-8 h-8 rounded"
-            />
+            <img src={currentChannel.logo} alt={currentChannel.name} className="w-8 h-8 rounded" />
           )}
           <div>
             <p className="text-white text-sm font-medium">{currentChannel.name}</p>

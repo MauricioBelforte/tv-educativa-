@@ -18,8 +18,11 @@ interface PlayerStore {
   isAuthenticated: boolean
   authPassword: string
   _initialized: boolean
-  
+  detectedStreams: Record<string, string>
+
   setChannel: (channel: Channel) => void
+  setDetectedStream: (channelId: string, streamUrl: string) => void
+  clearDetectedStream: (channelId: string) => void
   togglePlay: () => void
   toggleFavorite: (channelId: string) => void
   setFavorites: (ids: string[]) => void
@@ -102,9 +105,20 @@ export const usePlayerStore = create<PlayerStore>((set, get) => ({
   isAuthenticated: false,
   authPassword: '',
   _initialized: false,
-  
+  detectedStreams: {},
+
   setChannel: (channel) => set({ currentChannel: channel, isPlaying: true }),
   
+  setDetectedStream: (channelId, streamUrl) => set((state) => ({
+    detectedStreams: { ...state.detectedStreams, [channelId]: streamUrl },
+  })),
+
+  clearDetectedStream: (channelId) => set((state) => {
+    const copy = { ...state.detectedStreams }
+    delete copy[channelId]
+    return { detectedStreams: copy }
+  }),
+
   togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
   
   toggleFavorite: (channelId) => {

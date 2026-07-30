@@ -20,6 +20,9 @@ export default function ChannelCard({ channel, listId: propListId, allCategories
   const importedLists = usePlayerStore((state) => state.importedLists)
   const channelStatus = usePlayerStore((state) => state.channelStatus)
   const renameChannel = usePlayerStore((state) => state.renameChannel)
+  const setDetectedStream = usePlayerStore((state) => state.setDetectedStream)
+  const detectedStreams = usePlayerStore((state) => state.detectedStreams)
+  const [detecting, setDetecting] = useState(false)
 
   // Auto-detectar la lista a la que pertenece este canal
   const ownerList = importedLists.find(l => l.channels.some(c => c.id === channel.id))
@@ -201,6 +204,33 @@ export default function ChannelCard({ channel, listId: propListId, allCategories
                       </svg>
                       Renombrar
                     </button>
+                    {channel.playerType === 'iframe' && !channel.url.includes('.m3u8') && (
+                      <>
+                        <div className="border-t border-gray-700 my-1" />
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation()
+                            setDetecting(true)
+                            setMenuOpen(false)
+                            try {
+                              const res = await fetch(`/api/probe-iframe?url=${encodeURIComponent(channel.url)}`)
+                              const data = await res.json()
+                              if (data.found && data.url) {
+                                setDetectedStream(channel.id, data.url)
+                              }
+                            } catch {}
+                            setDetecting(false)
+                          }}
+                          disabled={detecting}
+                          className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-300 hover:bg-gray-700 hover:text-white transition-colors disabled:text-gray-600"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          {detecting ? 'Detectando...' : detectedStreams[channel.id] ? 'Redetectar stream' : 'Detectar stream directo'}
+                        </button>
+                      </>
+                    )}
                     <div className="border-t border-gray-700 my-1" />
                     <p className="px-3 py-1.5 text-xs text-gray-500 uppercase tracking-wider">Cambiar categoría</p>
                 {categories.filter(c => c !== channel.category).map((cat) => (
