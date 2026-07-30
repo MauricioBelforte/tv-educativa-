@@ -323,7 +323,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="relative">
-                      <ChannelList channels={filteredChannels} isLoading={isLoading && !activeListId} reorderMode={reorderMode} listId={activeListId} onReorder={handleReorder} />
+                      <ChannelList channels={filteredChannels} isLoading={isLoading && !activeListId} reorderMode={reorderMode} listId={activeListId} onReorder={handleReorder} currentChannelId={currentChannel?.id} />
                       <div className="sticky bottom-12 right-0 flex flex-col gap-2 items-end pr-3 pb-3 pointer-events-none z-50">
                         <div className="pointer-events-auto">
                           <button

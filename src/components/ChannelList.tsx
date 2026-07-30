@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Channel } from '@/lib/types'
 import ChannelCard from './ChannelCard'
 
@@ -10,12 +10,20 @@ interface ChannelListProps {
   reorderMode?: boolean
   listId?: string | null
   onReorder?: (listId: string, channelId: string, targetChannelId: string) => void
+  currentChannelId?: string | null
 }
 
-export default function ChannelList({ channels, isLoading, reorderMode, listId, onReorder }: ChannelListProps) {
+export default function ChannelList({ channels, isLoading, reorderMode, listId, onReorder, currentChannelId }: ChannelListProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
   const dragNode = useRef<HTMLElement | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (!currentChannelId) return
+    const el = listRef.current?.querySelector(`[data-channel-id="${currentChannelId}"]`)
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [currentChannelId])
 
   if (isLoading) {
     return (
@@ -95,13 +103,14 @@ export default function ChannelList({ channels, isLoading, reorderMode, listId, 
   }
 
   return (
-    <div className="space-y-1 select-none">
+    <div className="space-y-1 select-none" ref={listRef}>
       {channels.map((channel, index) => {
         const isDragging = dragIndex === index
         const isOver = dragOverIndex === index && dragIndex !== index
         return (
           <div
             key={channel.id}
+            data-channel-id={channel.id}
             draggable={reorderMode}
             onDragStart={(e) => handleDragStart(e, index)}
             onDragEnd={handleDragEnd}
